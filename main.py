@@ -1,14 +1,26 @@
+"""v7ai-fast - FastAPI based WOA smart assistant backend."""
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
-from app.controllers.callback_controller import router as callback_router
-from app.controllers.index_controller import router as index_router
+from fastapi.templating import Jinja2Templates
 
-load_dotenv()
+from app.api import api_router
+from app.core.settings import settings
+from app.core.database import init_db
+from app.core.logging import logger
+from app.api.v1.endpoints.woa import router as woa_router
 
-app = FastAPI(title="v7ai-fast", version="1.0.0")
+init_db()
+logger.info("v7ai-fast service starting...")
+
+app = FastAPI(
+    title="v7ai-fast",
+    description="WOA Smart Assistant Backend Service",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,16 +32,23 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.include_router(callback_router)
-app.include_router(index_router)
+app.include_router(api_router)
+app.include_router(woa_router, prefix="")
 
 
 @app.get("/")
 async def root():
-    return {"message": "v7ai-fast API is running"}
+    """Health check endpoint."""
+    return {"status": "ok", "service": "v7ai-fast"}
+
+
+@app.get("/v7")
+async def index():
+    """Redirect to static index page."""
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url="/static/index.html")
 
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("SERVER_PORT", 18081))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)
