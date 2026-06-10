@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v7ai-fast - FastAPI Service</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>v7ai-fast Service</h1>
+        <span class="status">✅ Running</span>
+        <p>FastAPI implementation of v7demo project</p>
+        
+        <h2>API Endpoints</h2>
+        <div class="endpoint">POST /callback/eventmsg - WOA事件回调</div>
+        <div class="endpoint">GET /v7 - 首页重定向</div>
+        <div class="endpoint">GET / - 健康检查</div>
+        <div class="endpoint">GET /docs - Swagger文档</div>
+        <div class="endpoint">GET /redoc - ReDoc文档</div>
+    </div>
+</body>
+</html>
