@@ -1,8 +1,9 @@
+"""Pydantic schemas for request and response models."""
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional
 
 
-class Event(BaseModel):
+class EventSchema(BaseModel):
     topic: str
     nonce: str
     time: int
@@ -10,28 +11,19 @@ class Event(BaseModel):
     signature: str
 
 
-class ChatMessage(BaseModel):
-    id: Optional[str] = None
-    content: Optional[str] = None
-
-
-class MessageContent(BaseModel):
+class MessageContentSchema(BaseModel):
     text: Optional[dict] = None
 
 
-class EventData(BaseModel):
+class EventDataSchema(BaseModel):
     chat: Optional[dict] = None
     message: Optional[dict] = None
 
 
-class SparkRequest(BaseModel):
+class ChatCompletionRequest(BaseModel):
     model: str
     temperature: float = 0.7
     messages: list[dict]
-
-
-class SparkResponse(BaseModel):
-    choices: list[dict]
 
 
 class WoaMessageRequest(BaseModel):
