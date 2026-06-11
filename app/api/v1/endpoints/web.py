@@ -16,6 +16,7 @@ from app.services.model_config import ModelConfigService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.cache_size = 0
 
 
 def _get_ai_service(db: Session) -> AIService:
@@ -708,6 +709,170 @@ async def session_detail(request: Request, chat_id: str, db: Session = Depends(g
 </html>
     """
     return HTMLResponse(content=html_content)
+
+
+@router.get("/knowledge", response_class=HTMLResponse)
+async def knowledge_page(request: Request):
+    """Knowledge base management page."""
+    return HTMLResponse(content=r"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库管理 - v7ai-fast</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .header nav a { color: white; text-decoration: none; margin-left: 20px; padding: 6px 14px; border-radius: 4px; background: rgba(255,255,255,0.2); }
+        .header nav a:hover { background: rgba(255,255,255,0.35); }
+        .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+        .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 18px; margin-bottom: 16px; }
+        .upload-area { border: 2px dashed #d9d9d9; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: border-color 0.3s, background 0.3s; }
+        .upload-area:hover { border-color: #667eea; background: #f8f9ff; }
+        .upload-area.dragover { border-color: #667eea; background: #eef0ff; }
+        .upload-area p { color: #999; margin: 8px 0; }
+        .upload-area .icon { font-size: 40px; margin-bottom: 8px; }
+        #fileInput { display: none; }
+        .upload-status { margin-top: 12px; padding: 8px 12px; border-radius: 4px; display: none; }
+        .upload-status.success { display: block; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+        .upload-status.error { display: block; background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; }
+        .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-item { flex: 1; min-width: 120px; background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-item .num { font-size: 28px; font-weight: bold; color: #667eea; }
+        .stat-item .label { font-size: 13px; color: #999; margin-top: 4px; }
+        .toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.85; }
+        .btn-danger { background: #ff4d4f; color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-ghost { background: none; border: 1px solid #d9d9d9; color: #666; }
+        .file-table { width: 100%; border-collapse: collapse; }
+        .file-table th { text-align: left; padding: 10px 12px; background: #fafafa; border-bottom: 1px solid #f0f0f0; font-weight: 600; font-size: 13px; color: #666; }
+        .file-table td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .file-table tr:hover { background: #f8f9ff; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .status-uploaded { background: #e6f7ff; color: #1890ff; }
+        .status-indexed { background: #f6ffed; color: #52c41a; }
+        .status-error { background: #fff2f0; color: #ff4d4f; }
+        .type-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; background: #f5f5f5; color: #666; margin-right: 4px; }
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .loading { text-align: center; padding: 20px; color: #999; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>📚 知识库管理</h1>
+    <nav>
+        <a href="/chat">💬 聊天</a>
+        <a href="/admin">⚙️ 控制面板</a>
+        <a href="/login" onclick="logout()">登出</a>
+    </nav>
+</div>
+<div class="container">
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item"><div class="num" id="statTotal">0</div><div class="label">总文件数</div></div>
+        <div class="stat-item"><div class="num" id="statTxt">0</div><div class="label">TXT</div></div>
+        <div class="stat-item"><div class="num" id="statPdf">0</div><div class="label">PDF</div></div>
+        <div class="stat-item"><div class="num" id="statXlsx">0</div><div class="label">Excel</div></div>
+        <div class="stat-item"><div class="num" id="statDocx">0</div><div class="label">Word</div></div>
+        <div class="stat-item"><div class="num" id="statMd">0</div><div class="label">Markdown</div></div>
+    </div>
+    <div class="card">
+        <h2>📤 上传文件</h2>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div class="icon">📁</div>
+            <p>点击或拖拽文件到此处上传</p>
+            <p style="font-size:12px;">支持 TXT / PDF / Excel / Word / Markdown / CSV</p>
+        </div>
+        <input type="file" id="fileInput" onchange="handleUpload(this.files[0])" accept=".txt,.pdf,.xlsx,.xls,.docx,.md,.csv">
+        <div class="upload-status" id="uploadStatus"></div>
+    </div>
+    <div class="card">
+        <div class="toolbar">
+            <h2 style="flex:1;margin:0;">📋 文件列表</h2>
+            <button class="btn btn-ghost" onclick="loadFiles()">🔄 刷新</button>
+        </div>
+        <div id="fileList"><div class="loading">加载中...</div></div>
+    </div>
+</div>
+<script>
+const API = "/api/v1/knowledge";
+async function loadStats(){
+    try{
+        const r = await fetch(API+"/files/stats");
+        const d = await r.json();
+        document.getElementById("statTotal").textContent = d.total || 0;
+        const bt = d.by_type || {};
+        document.getElementById("statTxt").textContent = bt.txt || 0;
+        document.getElementById("statPdf").textContent = bt.pdf || 0;
+        document.getElementById("statXlsx").textContent = bt.xlsx || 0;
+        document.getElementById("statDocx").textContent = bt.docx || 0;
+        document.getElementById("statMd").textContent = bt.md || 0;
+    }catch(e){console.error(e);}
+}
+async function loadFiles(){
+    const el = document.getElementById("fileList");
+    el.innerHTML='<div class="loading">加载中...</div>';
+    try{
+        const r = await fetch(API+"/files");
+        const d = await r.json();
+        if(!d.files||d.files.length===0){el.innerHTML='<div class="empty-state">暂无文件，请上传</div>';return;}
+        let h = '<table class="file-table"><thead><tr><th>文件名</th><th>类型</th><th>大小</th><th>状态</th><th>分片</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
+        d.files.forEach(function(f){
+            var sz = f.file_size < 1024 ? f.file_size+'B' : f.file_size < 1048576 ? (f.file_size/1024).toFixed(1)+'KB' : (f.file_size/1048576).toFixed(1)+'MB';
+            var ts = f.created_at ? f.created_at.slice(0,16).replace('T',' ') : '';
+            var fn = he(f.filename);
+            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="downloadFile('+f.id+',\''+fn+'\')">⬇下载</button> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑删除</button></td></tr>';
+        });
+        h += '</tbody></table>';
+        el.innerHTML = h;
+    }catch(e){el.innerHTML='<div class="empty-state">加载失败: '+he(e.message)+'</div>';}
+}
+async function handleUpload(file){
+    if(!file)return;
+    var st = document.getElementById("uploadStatus");
+    st.className="upload-status";st.textContent="上传中...";st.style.display="block";
+    var fd = new FormData();fd.append("file",file);
+    try{
+        var r = await fetch(API+"/upload",{method:"POST",body:fd});
+        var d = await r.json();
+        if(r.ok){st.className="upload-status success";st.textContent=d.message+" - "+d.file.filename;loadFiles();loadStats();}
+        else{st.className="upload-status error";st.textContent=d.detail||"上传失败";}
+    }catch(e){st.className="upload-status error";st.textContent="上传失败: "+e.message;}
+}
+async function downloadFile(id,name){
+    try{
+        var r = await fetch(API+"/download/"+id);
+        if(!r.ok){alert("下载失败");return;}
+        var b = await r.blob();
+        var u = URL.createObjectURL(b);
+        var a = document.createElement("a");a.href=u;a.download=name;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+    }catch(e){alert("下载失败: "+e.message);}
+}
+async function deleteFile(id){
+    if(!confirm("确定要删除这个文件吗？"))return;
+    try{
+        var r = await fetch(API+"/files/"+id,{method:"DELETE"});
+        if(r.ok){loadFiles();loadStats();}else{alert("删除失败");}
+    }catch(e){alert("删除失败: "+e.message);}
+}
+function he(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function sl(s){return {uploaded:'已上传',indexed:'已索引',error:'失败'}[s]||s;}
+(function(){
+    var ua = document.getElementById("uploadArea");
+    ua.addEventListener("dragover",function(e){e.preventDefault();ua.classList.add("dragover");});
+    ua.addEventListener("dragleave",function(){ua.classList.remove("dragover");});
+    ua.addEventListener("drop",function(e){e.preventDefault();ua.classList.remove("dragover");handleUpload(e.dataTransfer.files[0]);});
+})();
+function logout(){document.cookie="access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";}
+loadStats();loadFiles();
+</script>
+</body>
+</html>""")
 
 
 @router.get("/init-db")

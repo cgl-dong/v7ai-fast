@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_model: str = ""
 
+    # MinIO Configuration
+    minio_endpoint: str = "10.12.33.92:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "knowledge-base"
+    minio_secure: bool = False
+
     # JWT Configuration
     secret_key: str = ""
     algorithm: str = "HS256"

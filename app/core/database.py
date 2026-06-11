@@ -117,6 +117,24 @@ class SystemSetting(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class KnowledgeFile(Base):
+    """知识库文件记录"""
+    __tablename__ = "knowledge_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(500), nullable=False, comment="原始文件名")
+    stored_name = Column(String(500), nullable=False, comment="MinIO存储对象名")
+    file_type = Column(String(20), nullable=False, index=True, comment="文件类型: txt/pdf/xlsx/docx/md/csv")
+    file_size = Column(Integer, default=0, comment="文件大小(字节)")
+    file_path = Column(String(1000), nullable=False, comment="MinIO对象名")
+    status = Column(String(20), default="uploaded", index=True, comment="状态: uploaded/indexed/error")
+    error_msg = Column(Text, comment="错误信息")
+    chunk_count = Column(Integer, default=0, comment="分片数量")
+    uploader = Column(String(100), comment="上传者")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 # -- Helpers ---------------------------------------------------------
 
 def init_db():

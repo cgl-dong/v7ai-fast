@@ -85,12 +85,12 @@ uv run uvicorn main:app --host 0.0.0.0 --port 18081 --reload
 
 ### 4. 访问服务
 
-| 地址 | 说明 |
-|------|------|
-| http://localhost:18081/ | 健康检查 |
-| http://localhost:18081/docs | Swagger API 文档 |
-| http://localhost:18081/redoc | ReDoc 文档 |
-| http://localhost:18081/v7 | 首页 |
+| 地址                             | 说明             |
+| ------------------------------ | -------------- |
+| <http://localhost:18081/>      | 健康检查           |
+| <http://localhost:18081/docs>  | Swagger API 文档 |
+| <http://localhost:18081/redoc> | ReDoc 文档       |
+| <http://localhost:18081/v7>    | 首页             |
 
 ## API 接口
 
@@ -101,6 +101,7 @@ POST /api/v1/callback/eventmsg
 ```
 
 接收 WOA 平台的事件回调，自动处理：
+
 1. ✅ 签名验证
 2. ✅ 数据解密
 3. ✅ AI 问答
@@ -116,26 +117,43 @@ GET /
 
 ## 环境变量说明
 
-| 变量名 | 说明 | 必填 |
-|--------|------|------|
-| `SERVER_PORT` | 服务端口 (默认: 18081) | 否 |
-| `WOA_CONFIG_APP_ID` | WOA 应用 ID | 是 |
-| `WOA_CONFIG_APP_KEY` | WOA 应用密钥 | 是 |
-| `WOA_HOST` | WOA 服务器地址 | 是 |
-| `DEEPSEEK_API_KEY` | DeepSeek API Key | 是 |
-| `DEEPSEEK_MODEL` | DeepSeek 模型名称 | 否 |
+| 变量名                  | 说明               | 必填 |
+| -------------------- | ---------------- | -- |
+| `SERVER_PORT`        | 服务端口 (默认: 18081) | 否  |
+| `WOA_CONFIG_APP_ID`  | WOA 应用 ID        | 是  |
+| `WOA_CONFIG_APP_KEY` | WOA 应用密钥         | 是  |
+| `WOA_HOST`           | WOA 服务器地址        | 是  |
+| `DEEPSEEK_API_KEY`   | DeepSeek API Key | 是  |
+| `DEEPSEEK_MODEL`     | DeepSeek 模型名称    | 否  |
 
 ## 技术栈
 
-| 组件 | 说明 |
-|------|------|
-| **FastAPI** | 现代、快速的 Web 框架 |
-| **Uvicorn** | ASGI 服务器 |
-| **httpx** | 异步 HTTP 客户端 |
-| **Pydantic** | 数据验证 |
-| **Pydantic Settings** | 配置管理 |
-| **cryptography** | 加密工具 |
-| **uv** | 依赖管理 |
+| 组件                    | 说明            |
+| --------------------- | ------------- |
+| **FastAPI**           | 现代、快速的 Web 框架 |
+| **Uvicorn**           | ASGI 服务器      |
+| **httpx**             | 异步 HTTP 客户端   |
+| **Pydantic**          | 数据验证          |
+| **Pydantic Settings** | 配置管理          |
+| **cryptography**      | 加密工具          |
+| **uv**                | 依赖管理          |
+
+<br />
+
+## Config
+
+<br />
+
+```
+docker run -d --name minio \
+  -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_SECRET_KEY=minioadmin \
+  -v /data/minio:/data \
+  minio/minio:RELEASE.2024-08-03T04-33-23Z server /data --console-address ":9001"
+```
+
+<br />
 
 ## License
 
