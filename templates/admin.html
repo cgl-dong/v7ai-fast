@@ -20,7 +20,7 @@
         }
         .header h1 { font-size: 24px; }
         .nav a { color: white; margin-left: 20px; text-decoration: none; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
         .card {
             background: white;
             border-radius: 12px;
@@ -33,6 +33,19 @@
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-header h2 {
+            margin: 0;
+            padding: 0;
+            border: none;
         }
         table {
             width: 100%;
@@ -52,6 +65,9 @@
         }
         .badge.success { background: #d4edda; color: #155724; }
         .badge.failed { background: #f8d7da; color: #721c24; }
+        .badge.active { background: #d1ecf1; color: #0c5460; }
+        .badge.type-llm { background: #fff3cd; color: #856404; }
+        .badge.type-embedding { background: #d4edda; color: #155724; }
         .btn {
             padding: 6px 12px;
             background: #667eea;
@@ -63,7 +79,28 @@
             font-size: 14px;
         }
         .btn:hover { background: #5a6fd6; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
         .time { color: #888; font-size: 12px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        /* Modal styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; padding: 25px; width: 90%; max-width: 500px; position: relative; }
+        .modal-content h3 { margin-bottom: 20px; color: #333; }
+        .modal-content .close { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 20px; color: #999; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .error-message { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; }
+        .success-message { background: #d4edda; color: #155724; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; }
     </style>
 </head>
 <body>
@@ -75,6 +112,33 @@
         </div>
     </div>
     <div class="container">
+        <!-- Model Config Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2>⚙️ Model Configurations</h2>
+                <button class="btn btn-success" onclick="openAddModelModal()">+ Add Model</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Provider</th>
+                        <th>Model</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="model-table-body">
+                    <!-- Will be populated by JS -->
+                </tbody>
+            </table>
+            <div id="no-models" style="text-align: center; color: #888; padding: 20px;">
+                No models configured. Click "Add Model" to add one.
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
         <div class="card">
             <h2>📊 Recent Sessions</h2>
             <table>
@@ -82,6 +146,7 @@
                     <tr>
                         <th>Chat ID</th>
                         <th>User ID</th>
+                        <th>User Name</th>
                         <th>Created At</th>
                         <th>Actions</th>
                     </tr>
@@ -91,6 +156,7 @@
                     <tr>
                         <td>{{ session.chat_id }}</td>
                         <td>{{ session.user_id or '-' }}</td>
+                        <td>{{ session.user_name or '-' }}</td>
                         <td class="time">{{ session.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
                             <a href="/admin/session/{{ session.chat_id }}" class="btn">View</a>
@@ -100,6 +166,8 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Event Logs -->
         <div class="card">
             <h2>📝 Event Logs</h2>
             <table>
@@ -108,6 +176,7 @@
                         <th>Topic</th>
                         <th>Operation</th>
                         <th>Chat ID</th>
+                        <th>User ID</th>
                         <th>Status</th>
                         <th>Created At</th>
                     </tr>
@@ -118,6 +187,7 @@
                         <td>{{ event.topic }}</td>
                         <td>{{ event.operation }}</td>
                         <td>{{ event.chat_id or '-' }}</td>
+                        <td>{{ event.user_id or '-' }}</td>
                         <td>
                             <span class="badge {{ event.processed }}">{{ event.processed }}</span>
                         </td>
@@ -128,5 +198,228 @@
             </table>
         </div>
     </div>
+
+    <!-- Add/Edit Model Modal -->
+    <div id="model-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModelModal()">&times;</span>
+            <h3 id="modal-title">Add Model Configuration</h3>
+            <div class="error-message" id="modal-error"></div>
+            <div class="success-message" id="modal-success"></div>
+            
+            <form id="model-form">
+                <input type="hidden" id="model-id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Model Type</label>
+                        <select id="model-type" required>
+                            <option value="llm">LLM Model</option>
+                            <option value="embedding">Embedding Model</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="model-name" required placeholder="e.g., DeepSeek Chat">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Provider</label>
+                        <select id="model-provider" required>
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="huggingface">HuggingFace</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Name</label>
+                        <input type="text" id="model-model-name" placeholder="e.g., deepseek-chat">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>API URL</label>
+                    <input type="text" id="model-api-url" placeholder="e.g., https://api.deepseek.com/v1">
+                </div>
+                
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="model-api-key" placeholder="Enter API Key">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="model-description" placeholder="Describe this configuration"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="model-is-active"> Set as Active
+                    </label>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModelModal()">Cancel</button>
+                    <button type="submit" class="btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let editingModelId = null;
+
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/v1/model/models');
+                const models = await response.json();
+                renderModels(models);
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+
+        function renderModels(models) {
+            const tbody = document.getElementById('model-table-body');
+            const noModels = document.getElementById('no-models');
+            
+            if (models.length === 0) {
+                tbody.innerHTML = '';
+                noModels.style.display = 'block';
+                return;
+            }
+            
+            noModels.style.display = 'none';
+            tbody.innerHTML = models.map(model => `
+                <tr>
+                    <td>${model.name}</td>
+                    <td><span class="badge type-${model.model_type}">${model.model_type.toUpperCase()}</span></td>
+                    <td>${model.provider}</td>
+                    <td>${model.model_name || '-'}</td>
+                    <td>${model.is_active ? '<span class="badge active">Active</span>' : '-'}</td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editModel(${model.id})">Edit</button>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteModel(${model.id})">Delete</button>
+                        ${!model.is_active ? `<button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;" onclick="activateModel(${model.id})">Activate</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModelModal() {
+            editingModelId = null;
+            document.getElementById('modal-title').textContent = 'Add Model Configuration';
+            document.getElementById('model-form').reset();
+            document.getElementById('model-id').value = '';
+            document.getElementById('modal-error').style.display = 'none';
+            document.getElementById('modal-success').style.display = 'none';
+            document.getElementById('model-modal').classList.add('active');
+        }
+
+        function closeModelModal() {
+            document.getElementById('model-modal').classList.remove('active');
+        }
+
+        async function editModel(id) {
+            try {
+                const response = await fetch(`/api/v1/model/models/${id}`);
+                const model = await response.json();
+                
+                editingModelId = id;
+                document.getElementById('modal-title').textContent = 'Edit Model Configuration';
+                document.getElementById('model-id').value = model.id;
+                document.getElementById('model-type').value = model.model_type;
+                document.getElementById('model-name').value = model.name;
+                document.getElementById('model-provider').value = model.provider;
+                document.getElementById('model-model-name').value = model.model_name || '';
+                document.getElementById('model-api-url').value = model.api_url || '';
+                document.getElementById('model-api-key').value = model.api_key || '';
+                document.getElementById('model-description').value = model.description || '';
+                document.getElementById('model-is-active').checked = model.is_active;
+                document.getElementById('modal-error').style.display = 'none';
+                document.getElementById('modal-success').style.display = 'none';
+                document.getElementById('model-modal').classList.add('active');
+            } catch (error) {
+                console.error('Failed to load model:', error);
+            }
+        }
+
+        async function deleteModel(id) {
+            if (!confirm('Are you sure you want to delete this model?')) return;
+            
+            try {
+                const response = await fetch(`/api/v1/model/models/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadModels();
+                }
+            } catch (error) {
+                console.error('Failed to delete model:', error);
+            }
+        }
+
+        async function activateModel(id) {
+            try {
+                const response = await fetch(`/api/v1/model/models/${id}/activate`, { method: 'POST' });
+                if (response.ok) {
+                    loadModels();
+                }
+            } catch (error) {
+                console.error('Failed to activate model:', error);
+            }
+        }
+
+        document.getElementById('model-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                model_type: document.getElementById('model-type').value,
+                name: document.getElementById('model-name').value,
+                provider: document.getElementById('model-provider').value,
+                model_name: document.getElementById('model-model-name').value || undefined,
+                api_url: document.getElementById('model-api-url').value || undefined,
+                api_key: document.getElementById('model-api-key').value || undefined,
+                description: document.getElementById('model-description').value || undefined,
+                is_active: document.getElementById('model-is-active').checked
+            };
+            
+            try {
+                let response;
+                if (editingModelId) {
+                    response = await fetch(`/api/v1/model/models/${editingModelId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    response = await fetch('/api/v1/model/models', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
+                
+                if (response.ok) {
+                    document.getElementById('modal-success').textContent = editingModelId ? 'Updated successfully!' : 'Added successfully!';
+                    document.getElementById('modal-success').style.display = 'block';
+                    setTimeout(() => {
+                        closeModelModal();
+                        loadModels();
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    document.getElementById('modal-error').textContent = error.detail || 'Operation failed';
+                    document.getElementById('modal-error').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('modal-error').textContent = 'Network error, please retry';
+                document.getElementById('modal-error').style.display = 'block';
+            }
+        });
+
+        loadModels();
+    </script>
 </body>
 </html>

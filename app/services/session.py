@@ -77,3 +77,10 @@ class SessionService:
             .order_by(ChatSession.created_at.desc())\
             .limit(limit)\
             .all()
+    
+    def get_sessions_with_user(self, limit: int = 20):
+        """Get recent sessions with user information."""
+        return self.db.query(ChatSession)\
+            .order_by(ChatSession.created_at.desc())\
+            .limit(limit)\
+            .all()
