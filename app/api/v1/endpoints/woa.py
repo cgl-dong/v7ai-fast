@@ -7,25 +7,11 @@ from sqlalchemy.orm import Session
 from app.core.security import auth_check, decrypt_event
 from app.core.database import get_db
 from app.core.logging import logger
-from app.services.deepseek import AIService
+from app.services.agent import RAGAgent
 from app.services.woa import WoaService
 from app.services.session import SessionService
-from app.services.model_config import ModelConfigService
 
 router = APIRouter()
-
-
-def _get_ai_service(db: Session) -> AIService:
-    """Create AIService using the active LLM config from database, falling back to .env."""
-    service = ModelConfigService(db)
-    active = service.get_active_config("llm")
-    if active and active.api_key:
-        return AIService(
-            api_key=active.api_key,
-            model=active.model_name,
-            api_url=active.api_url
-        )
-    return AIService()
 
 
 @router.post("/callback/eventmsg")
@@ -75,17 +61,10 @@ async def handle_event(request: Request, db: Session = Depends(get_db)):
         session = session_service.get_or_create_session(chat_id, user_id)
         session_service.add_message(session.id, event.get("message", {}).get("id", ""), "user", message_text)
         
-        logger.info("Calling DeepSeek AI...")
-        deepseek = _get_ai_service(db)
-        try:
-            answer = await deepseek.call_model(message_text)
-            logger.info(f"DeepSeek response: {answer[:50] if answer else None}")
-        except RuntimeError as e:
-            answer = str(e)
-            logger.error(f"AI call error: {answer}")
-        except Exception as e:
-            answer = f"AI调用异常: {e}"
-            logger.error(f"AI call exception: {e}")
+        logger.info("Running LangGraph RAG Agent...")
+        agent = RAGAgent(db)
+        answer = await agent.run(message_text)
+        logger.info(f"Agent response: {answer[:50] if answer else None}")
         
         session_service.add_message(session.id, str(hash(answer)), "assistant", answer)
         

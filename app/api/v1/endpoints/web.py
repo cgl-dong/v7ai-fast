@@ -10,7 +10,7 @@ from app.core.database import get_db, init_db
 from app.core.database import ChatMessage
 from app.core.logging import logger
 from app.services.session import SessionService
-from app.services.deepseek import AIService
+from app.services.agent import RAGAgent
 from app.services.auth import AuthService
 from app.services.model_config import ModelConfigService
 
@@ -19,19 +19,9 @@ templates = Jinja2Templates(directory="templates")
 templates.env.cache_size = 0
 
 
-def _get_ai_service(db: Session) -> AIService:
-    """Create AIService using the active LLM config from database, falling back to .env."""
-    service = ModelConfigService(db)
-    active = service.get_active_config("llm")
-    if active and active.api_key:
-        return AIService(
-            api_key=active.api_key,
-            model=active.model_name,
-            api_url=active.api_url
-        )
-    return AIService()
-# Fix: Replace bytecode cache to avoid Windows Jinja2 dict key bug
-templates.env.bytecode_cache = None
+def _get_agent(db: Session) -> RAGAgent:
+    """Create RAGAgent with database session for retrieval."""
+    return RAGAgent(db)
 
 ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -591,7 +581,7 @@ async def create_session(db: Session = Depends(get_db)):
 
 @router.post("/api/chat")
 async def chat_message(request: Request, db: Session = Depends(get_db)):
-    """Handle chat message."""
+    """Handle chat message via LangGraph RAG Agent."""
     data = await request.json()
     message = data.get("message", "")
     session_id = data.get("session_id", "web-" + str(datetime.now().timestamp()))
@@ -600,13 +590,8 @@ async def chat_message(request: Request, db: Session = Depends(get_db)):
     session = session_service.get_or_create_session(session_id)
     session_service.add_message(session.id, str(datetime.now().timestamp()), "user", message)
     
-    deepseek = _get_ai_service(db)
-    try:
-        answer = await deepseek.call_model(message)
-    except RuntimeError as e:
-        answer = str(e)
-    except Exception as e:
-        answer = f"AI调用异常: {e}"
+    agent = _get_agent(db)
+    answer = await agent.run(message)
     
     session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", answer)
     
