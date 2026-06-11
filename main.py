@@ -10,6 +10,7 @@ from app.core.settings import settings
 from app.core.database import init_db
 from app.core.logging import logger
 from app.api.v1.endpoints.woa import router as woa_router
+from app.api.v1.endpoints.web import router as web_router
 
 init_db()
 logger.info("v7ai-fast service starting...")
@@ -34,6 +35,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(api_router)
 app.include_router(woa_router, prefix="")
+app.include_router(web_router, prefix="")
 
 
 @app.get("/")
@@ -51,4 +53,4 @@ async def index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=settings.server_port, reload=True)
