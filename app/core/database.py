@@ -86,6 +86,37 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class ModelConfig(Base):
+    """Represents a model configuration."""
+    __tablename__ = "model_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_type = Column(String(50), nullable=False, index=True)  # llm, embedding
+    name = Column(String(100), nullable=False)
+    provider = Column(String(50), nullable=False)  # deepseek, openai, huggingface, custom
+    api_key = Column(String(255))
+    api_url = Column(String(500))
+    model_name = Column(String(200))
+    description = Column(Text)
+    is_active = Column(Boolean, default=False)
+    is_default = Column(Boolean, default=False)
+    extra_config = Column(Text)  # JSON string for extra configuration
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class SystemSetting(Base):
+    """Represents system-wide settings."""
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(100), unique=True, nullable=False)
+    value = Column(Text)
+    description = Column(String(255))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 # -- Helpers ---------------------------------------------------------
 
 def init_db():
