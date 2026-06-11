@@ -8,6 +8,13 @@ from datetime import datetime
 
 from app.core.settings import settings
 
+try:
+    from pgvector.sqlalchemy import Vector
+    VECTOR_AVAILABLE = True
+except ImportError:
+    Vector = None
+    VECTOR_AVAILABLE = False
+
 # -- Engine ----------------------------------------------------------
 DATABASE_URL = (
     f"postgresql://{settings.db_user}:{settings.db_password}"
@@ -42,6 +49,19 @@ class ChatSession(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     messages = relationship("ChatMessage", back_populates="session")
+
+
+class DocumentChunk(Base):
+    """知识库文档分片向量表"""
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(Integer, ForeignKey("knowledge_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, default=0, comment="分片序号")
+    content = Column(Text, nullable=False, comment="分片文本内容")
+    embedding = Column(Vector(384), nullable=True, comment="文本向量(384维)") if VECTOR_AVAILABLE else Column(Text, nullable=True)
+    metadata_json = Column(Text, comment="元数据JSON(来源/页码/工作表等)")
+    created_at = Column(DateTime, default=datetime.now)
 
 
 class ChatMessage(Base):

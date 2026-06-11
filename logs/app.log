@@ -106,3 +106,628 @@
 2026-06-11 10:39:51,502 - v7ai-fast - INFO - v7ai-fast service starting...
 2026-06-11 11:02:27,696 - v7ai-fast - INFO - v7ai-fast service starting...
 2026-06-11 11:02:35,784 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 11:02:51,589 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 13:41:38,429 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 13:41:40,172 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 13:47:26,392 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 13:51:35,293 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:13:31,765 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:43:21,234 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:43:23,277 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:48:14,738 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:48:38,010 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:49:57,197 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:51:24,710 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 14:51:53,315 - v7ai-fast - ERROR - Upload error: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[ChatMessage(chat_messages)]'. Original exception was: Mapper 'Mapper[ChatSession(chat_sessions)]' has no property 'messages'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.
+2026-06-11 14:53:14,156 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:01:12,401 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:02:06,837 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:02:52,814 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"2383d0e2b558063070f22c54298b02ab","signature":"FkRUMowFif8uQzzjCiAK8UlZ9s3XoENQKEw_fR3gXrU","encrypted_data":"2WeZ2Stc4r'
+2026-06-11 15:02:52,814 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:52,814 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:52,839 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"1b6190aec8af2fa4623850ea5d31d104","signature":"pCjdCmrC8Zlrb48wwAseahQM1lAxfdzZz_aQdjuQMTw","encrypted_data":"ipC+Q2D5iPvXOBut'
+2026-06-11 15:02:52,839 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:52,839 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:52,896 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"1e6c0469e7a0207631aba34deacdab03","signature":"LWFxH1el0diHmdydUtd_64O3syWwsFhD4pVbgitz5uo","encrypted_data":"r62OQ3teg88WfbQm'
+2026-06-11 15:02:52,896 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:52,896 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:52,923 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"95e99eecc2d4c46701bdff34cb6b4180","signature":"L7xHnp9wK1QGzpiITAQvBJBTT1ABwrY8MHDWeRhOT6Q","encrypted_data":"5h5SqyHtwI'
+2026-06-11 15:02:52,923 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:52,923 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:54,948 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"c6479151cd4005695bff099506c39816","signature":"d7zmRZgxjg_mO_VbwaRdgW6XuhPpzwGxg4jSeh7zvn0","encrypted_data":"tnsNyLxhDCY5cOEd'
+2026-06-11 15:02:54,948 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:54,948 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:54,968 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"4506a96df65f434e0f5ac7c62c2a4dd2","signature":"aKwf-8LigEodz3oMbwtguE5YkxtYY34mLDJspYN0rok","encrypted_data":"sSisMCiTSA'
+2026-06-11 15:02:54,968 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:54,968 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:58,995 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"c24a6bd49307be10b8742daf6ae1db35","signature":"8eR0mAOXHm183ABJ-weejVeYnF9qEb9J2-yGLeeqcN4","encrypted_data":"Klzusk0Ly3piH6Kb'
+2026-06-11 15:02:58,995 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:58,995 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:02:59,020 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"54e4b6a9921009ca7a7723750a4dc106","signature":"IBKQr4vM7-6YnkdjRiW7qbDoQh_jfyHJZrmxBs6i1EM","encrypted_data":"SdESY+2xoo'
+2026-06-11 15:02:59,020 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:02:59,020 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:05,055 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"5189846d4eb3e91c0e94af01da933b7a","signature":"nvXFjO553RuUzSCGJUq6I9c51nI_0RHQPuVEPiETc9Q","encrypted_data":"EfR75v9htc'
+2026-06-11 15:03:05,055 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:05,055 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:05,074 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"411c4a7a166e3cddf85f580558f11c95","signature":"2vbvGK45CsrHDQ60KSQtT2J3uK7BmpH0vZYVrVyPF2M","encrypted_data":"aPixNpL2GYFfT39j'
+2026-06-11 15:03:05,074 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:05,074 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:13,113 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"35390add07ff1fea802c888cf4aba495","signature":"mDKoh_4Q90erosijFJS2YvqT0nLJP2yW2C4GvzLR0OY","encrypted_data":"p1XlXLQWE5'
+2026-06-11 15:03:13,114 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:13,114 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:13,140 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"56184f1e8f471629afd4ddd8ed45d5f4","signature":"HEi2Ak5v0XeCjGDMZbISFMAUEPBz_q01EeIKMR6cohk","encrypted_data":"yKKvTSBsSpV/OSUy'
+2026-06-11 15:03:13,140 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:13,140 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:23,172 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"710cf11dc4cf701b85415421b00292e2","signature":"pAdPUCiA3wPG3p0RSZkpzLCD5da8l9SiZonaWYbmVaE","encrypted_data":"jpt03FIZff'
+2026-06-11 15:03:23,173 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:23,173 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:23,599 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"99e794dcc9c9afab9ac50b11fd4d6f22","signature":"EZoz17-K8_nBKMFJa-xgJI6ps71Hrvv4H2TTNP4k1Kc","encrypted_data":"4E9ZS1G9w3NESBB4'
+2026-06-11 15:03:23,600 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:23,600 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:35,262 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"4b13d374aa1708b6b28f4a5b5000fb57","signature":"i4_PjJ-_9D8acNL5LFDOoLQUnbvmIOY2GUvtyv6JR8U","encrypted_data":"m4ABrFiWuL'
+2026-06-11 15:03:35,262 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:35,262 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:35,677 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"234ce2e829127416a45d08cd3f3346d6","signature":"GDkiH16274uSY5VHJKLDLwIJ0MXlBU9QPTKJjXslp-g","encrypted_data":"DonrLcyW9WDK0B6q'
+2026-06-11 15:03:35,677 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:35,677 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:49,362 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"b6efe1a403d4ab11d987783371e95934","signature":"TGSGU8EZZ_eAiYWiJH1MnhQcxKPnrO-ocB61RX9q0-I","encrypted_data":"EjO9Yad0Hc'
+2026-06-11 15:03:49,362 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:49,362 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:03:49,757 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"9cead1902d703cc8ca3bcd3ff1a1f498","signature":"hl9Gfqgl-BhfRs4piQIPeV5cz8wp8fIgIvqNdNmGqF0","encrypted_data":"f5VLN0CvwIHsr7Wi'
+2026-06-11 15:03:49,757 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:03:49,757 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:05,444 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"137ce1d39e30a91f4cd5188139384cad","signature":"KTivjXWf7ofMrBg8VyXehnJdLcxvNXM35HP6xZv_i08","encrypted_data":"X9mTrZNTdL'
+2026-06-11 15:04:05,444 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:05,445 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:06,116 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"7a684f5c3415cbd725f5faa5d03e6323","signature":"OQaAZbJWJdyvegHqD2icFm9crH7TuKw6Cc0HmxJxaJE","encrypted_data":"KziN2TfJ2g2u9rlb'
+2026-06-11 15:04:06,116 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:06,116 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:07,416 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161448,"nonce":"67e0a1bfba4c38895afc5a3515e1ea23","signature":"n6BwCAh9PuNqF4fF4hny7VKzG1N6atrhvGPxFytihhU","encrypted_data":"+y4kvIsABB'
+2026-06-11 15:04:07,416 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:07,416 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:07,465 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161448,"nonce":"7802a335d8c7a1f1f96cb956717cc61a","signature":"qdWu0Zp6-Jni4CmoPPPkYBKN6ZWpGNSKiDnmeiWJATQ","encrypted_data":"K/6+e+3Go+QLqgOM'
+2026-06-11 15:04:07,465 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:07,465 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:23,521 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"03b361ed72f50e0fd9a7d7d39fea4112","signature":"flJAWUWWcwaIKB_-toJ7s4sOVCz3TLX_XxCy7pts-94","encrypted_data":"+CgCnT7kMD'
+2026-06-11 15:04:23,521 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:23,521 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:24,185 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"2a20795aa403c3cfd9b324321831bc80","signature":"06ZkcTuJ7CHg_PDPYSo66TRcSbQhM-TH1MSdjJL6FVc","encrypted_data":"ouR5IKlZywWmqKTU'
+2026-06-11 15:04:24,186 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:24,186 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:25,482 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161448,"nonce":"44d2b8f9ae29403e54454eadc57f5233","signature":"FsxaLyeEzRlt_tPyU6uL9rEuhBqekLk98fdNmBFm7Y0","encrypted_data":"/sD5y774GS'
+2026-06-11 15:04:25,482 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:25,482 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:25,534 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161448,"nonce":"bd1c7115840a72a95351967f8db91342","signature":"0PN-NXDxuL-fwJ3I6hTFhqmYWnRMatjUGmpc2yNyPoo","encrypted_data":"ihzY/M7jo9yjIwV/'
+2026-06-11 15:04:25,535 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:25,535 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:43,553 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"cd7835f3389fd55e5e6e9e4d0b620307","signature":"1rPjTP-tUtcKl1DDt7Ou3ncIZSp00Vw0JZuubAo8D78","encrypted_data":"Bq4WiiB8w0'
+2026-06-11 15:04:43,553 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:43,553 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:44,212 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"0bcdf4bae1d71a288eafcec3ed124459","signature":"O7hf3EOHy-Qy2xzjqoKwIaC7-nDqlIsVbVVESTvzDHY","encrypted_data":"F7JPJhRoGlfhSc9F'
+2026-06-11 15:04:44,212 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:44,212 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:45,515 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161448,"nonce":"ed392aeac2e249a7fa70dc3681481bdf","signature":"CdNBKeCr8uYnmHGp3fyXJ21aCLEUR090YrtBSg45dDY","encrypted_data":"D8j5qcbBot'
+2026-06-11 15:04:45,516 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:45,516 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:04:45,793 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161448,"nonce":"0d48c34fdc429cd67c0cd0e6450ed1b7","signature":"gt_8LrZ68zztxH3a6LCPJk6q6xzls1F1xG0Q0vxdeCc","encrypted_data":"Zt3GYBp4S+DDNuNS'
+2026-06-11 15:04:45,793 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:04:45,794 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:05:03,584 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"0fbc35f0696eb6cb400fc20a15b986ea","signature":"Zde9URVRxGPtUxBo1ktoouzIO4h15jlnPj9z6G4Owl4","encrypted_data":"hKKvAlwjm0'
+2026-06-11 15:05:03,584 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:03,585 - v7ai-fast - ERROR - Error processing event: 'NoneType' object has no attribute 'encode'
+2026-06-11 15:05:06,876 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:05:06,897 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161373,"nonce":"3ae69143aca2bbb4a5655c9be472ad31","signature":"nclCrnVhLxd3SKdIn__EtCoYoDvICttpKv5far_FQMk","encrypted_data":"Q6ok/wKtiFhu4WCR'
+2026-06-11 15:05:06,897 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:06,898 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:06,930 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:05:06,930 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:05:06,931 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161448,"nonce":"161dcc068a6a2f7ebab5c26a33f3f2a3","signature":"LA5s1-vl5SjjK5CZ-toqfc6SePZSbuj964EfMpBuvLY","encrypted_data":"gxKsrzpFeVpCOE3w'
+2026-06-11 15:05:06,931 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:06,931 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:06,931 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:05:06,931 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:05:06,932 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161448,"nonce":"8e68eb7f8c29668fc1dea96403426603","signature":"7DtJMWB6fdDK5JfToXVwSdJRYrKc8yU7ofRPc7o3Yp0","encrypted_data":"8hNIdl+Gnw'
+2026-06-11 15:05:06,932 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:06,932 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:06,932 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:05:06,996 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:05:08,593 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"5b5078a1438649974cfe13aff2cd2e17","signature":"DZEoyog6crhcP3MH15eHZfztA0m17198U8rcdofwOdk","encrypted_data":"+mKcxNngSp'
+2026-06-11 15:05:08,593 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:08,594 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:08,597 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:05:08,640 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 8, 631997)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:08,641 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161509,"nonce":"98f38461d1ace7478af6e3471fe2c40b","signature":"edp7y7JD9DOD7REu8eNDGPXHajdM-p4F-fWyqw0QuYs","encrypted_data":"cAc6bVMefaFAD6dF'
+2026-06-11 15:05:08,641 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:08,641 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:08,641 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:05:08,641 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:05:11,325 - v7ai-fast - INFO - DeepSeek response: 你好！很高兴见到你！😊
+
+我是DeepSeek，一个由深度求索公司创造的AI助手。我可以帮你回答问题
+2026-06-11 15:05:11,596 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:05:12,163 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:05:23,629 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"fcc36ff777c8e5f014e8f0e1b7b23a46","signature":"mn-bp-aLcGMIzkNeAg5VW8Qu1-vtGM6neLKDPubnAqk","encrypted_data":"ZFqfxX1cGV'
+2026-06-11 15:05:23,629 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:23,629 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:23,629 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:05:23,658 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 23, 648427)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:24,717 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"76d0ba7b74d2d0d1837d011468641bcb","signature":"d_eF61XuClIIIRjuoyPkrdWFQJSB1JwPUfmSt1RNj0U","encrypted_data":"NBh6cxbJia'
+2026-06-11 15:05:24,718 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:24,718 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:24,718 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:05:24,758 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 24, 744087)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:24,759 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161525,"nonce":"aa3191c563e104d151b71610bb9b0d65","signature":"e4AlsZov33qmXMiKlbyCg38NSHMskfw5Z0avwqY_pXw","encrypted_data":"KMjWPKB75g0tT51l'
+2026-06-11 15:05:24,759 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:24,759 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:24,759 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:05:24,759 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:05:25,673 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"22e86ca35e08e38481706ca212bf04b0","signature":"WM13Qeq3GMtgkvgEqx8PhJ5GwaomHrMkYCfZ3d2TpFY","encrypted_data":"eKaDa2yQ2e'
+2026-06-11 15:05:25,673 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:25,673 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:25,673 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:05:25,740 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 25, 695206)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:26,773 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"d4ec63bdbb81e85c5cce092abc5d0051","signature":"rV53s7uEI_TLGD_zLMCK6RPeukueg7HHGrn52ncfBNk","encrypted_data":"UtMJmM+ZPb'
+2026-06-11 15:05:26,773 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:26,773 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:26,773 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:05:26,791 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 26, 785322)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:28,660 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"ebd2136b01f0ee5518c17345658357f3","signature":"2OGpOKg1SLZjnt80jgSKRfcqyE6FLJ9K0qpZqFwVIEc","encrypted_data":"rli4TLT1Gv'
+2026-06-11 15:05:28,660 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:28,660 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:28,660 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:05:28,686 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 28, 674924)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:29,755 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"ab0f818cebc7a66e65f787067127304a","signature":"Wn9v3rjuB3HaQDAgfi3B1SPnY_vKG78mJZB-vp42n_I","encrypted_data":"TXJ2xA7KzR'
+2026-06-11 15:05:29,755 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:29,755 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:29,755 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:05:29,774 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 29, 765819)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:32,823 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"be9c1615065df69a52fcd665e0ef28ca","signature":"0NzPtWZHBXD770RYxBi6i7WJSkehZ9IVghvl3VzszZ8","encrypted_data":"aXXpWESvCB'
+2026-06-11 15:05:32,823 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:32,823 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:32,823 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:05:32,882 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 32, 857039)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:36,702 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"74e796bddf7247905075547f782803c5","signature":"aEFOcBDNaaMkHhUeTx2wJ_t-0GyyyFvWB2I8npaUPBg","encrypted_data":"zlNwsaUlQz'
+2026-06-11 15:05:36,702 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:36,702 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:36,702 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:05:36,718 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 36, 712334)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:39,793 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"188b9376df08b5cd25063c73cc9d0932","signature":"Bx_0SADPiG6Nrgt9kcvr90d3kABZez1Vl902ZSd0bEY","encrypted_data":"6e7tQhvDld'
+2026-06-11 15:05:39,794 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:39,794 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:39,794 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:05:39,827 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 39, 815698)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:44,918 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"9a01ad50ffa49b3992965d44bdaeaefa","signature":"Lx4Tjo4T-z1FsDQYfM_0PpiUWI0cHxYYABxvQh5wLMw","encrypted_data":"ib0nGZ54F3'
+2026-06-11 15:05:44,918 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:44,918 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:44,918 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:05:44,981 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 44, 955261)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:50,751 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"b7c78940590826fd6c730b76be539fe2","signature":"Y-xnXehu5ZZnCWL8YikhEyeZ6cQG7w55gKMosmlVCXs","encrypted_data":"82cOM4jots'
+2026-06-11 15:05:50,751 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:50,751 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:50,751 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:05:50,773 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 50, 766236)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:52,056 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"6ab56590d0c5b7eef1e59dfe690d0080","signature":"mg3tDDxXCv_p15yiqgYtWlkYW2Ve8t2vQTXbgWHyil8","encrypted_data":"WlzRrGlNtm'
+2026-06-11 15:05:52,056 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:52,056 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:52,057 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:05:52,111 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 52, 88823)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:05:52,120 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161552,"nonce":"5177ddf897afab486babe57781999b77","signature":"J88UYvxWJzQc9o6Iu-GZd67-vDIGbQQI2XGyeJXevdw","encrypted_data":"/7voYhChkeqI7tlT'
+2026-06-11 15:05:52,120 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:52,120 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:52,120 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:05:52,120 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:05:55,839 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"bb61f5e8a32f6f21a92bd6b7d3c97588","signature":"eO8ZBlH4i2ur28w33bMN_jyfb4OHOoIoANKJdA3svDg","encrypted_data":"5J1t/hGlr5'
+2026-06-11 15:05:55,839 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:05:55,839 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:05:55,839 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:05:55,868 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 5, 55, 860928)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:03,002 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"1992cabf9ba99aa14214eec6284697fd","signature":"XqtTCUURkiapWaFk5m7ub-onYLql5JrER98hurppQPM","encrypted_data":"4T+bEcXkV8'
+2026-06-11 15:06:03,002 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:03,002 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:03,002 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:06:03,025 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 3, 17920)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:10,806 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"f6689d5bbf3abd145f73939e614ef110","signature":"rF0RUSaK4GRS2UubGDo5SAVucdcJmsL6EszYNbQY2fI","encrypted_data":"84ua8zZa/b'
+2026-06-11 15:06:10,807 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:10,807 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:10,807 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:06:10,861 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 10, 846494)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:12,159 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"b6dbb9194d11dac09a4d10854b2dd4b1","signature":"4BSzUVJ3bnubco9Lxw8iYEOoqJf3TiECgSljTfIj8SY","encrypted_data":"QwUWt0an1K'
+2026-06-11 15:06:12,159 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:12,159 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:12,160 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:06:12,219 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 12, 199265)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:15,911 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"2159cbc53fab98259d0b2c9306b14f15","signature":"JqOhg1p5g6H7QpPcw1EK2dUepZl65aAyU-uDJLkffR4","encrypted_data":"fAyrCY1GL5'
+2026-06-11 15:06:15,911 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:15,912 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:15,912 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:06:15,975 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 15, 950085)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:23,161 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"427e8fbc583a11dcc18a8ab6e992026c","signature":"0qMqT6lDQwG_Dq8Mt55j3kmquKWzeXsWTxMUyHu7qZc","encrypted_data":"zbVJkqancs'
+2026-06-11 15:06:23,161 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:23,161 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:23,161 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:06:23,755 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 23, 473767)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:30,923 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"9a8b38b62e8a11a52b9a5354474b69bb","signature":"fMMjM0IffUVjWeM1FDXxQAejM64PP-5MjNImGmslRJQ","encrypted_data":"M5r14Qzpf1'
+2026-06-11 15:06:30,923 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:30,923 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:30,923 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:06:31,001 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 30, 966500)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:32,267 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"5b609e89733e26359e56c783f019567b","signature":"fIfuPxdTjRXsjnjQSYH6OKyxiAtK9hpAgYENPW6YtSI","encrypted_data":"OIVNXBFwzP'
+2026-06-11 15:06:32,267 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:32,267 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:32,267 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:06:32,331 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 32, 306747)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:36,011 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"aba753307d20dfddfaefdf150dc6b2aa","signature":"mQ6qkqeAQb8OxsDzsbqjW86oZrkJPjYK5D3vcxbQ6mU","encrypted_data":"m1jNSjruwH'
+2026-06-11 15:06:36,011 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:36,011 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:36,012 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:06:36,070 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 36, 45748)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:43,782 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"f284bec49d16e781acd843227e4f8904","signature":"E71tfyFxnnPfUX-FJ-oJ5I_LPuZB4xX86DUdVyY3LuE","encrypted_data":"oSYYNCsZmO'
+2026-06-11 15:06:43,782 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:43,782 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:43,782 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:06:43,837 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 43, 808946)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:51,037 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"2c8fb074f421381d39d0708ee6e7ece1","signature":"suT7ENTVDw88E3Z4VSYt6VFmkEr4tVtHagf1mZ_2dWg","encrypted_data":"nBxzcgnTJR'
+2026-06-11 15:06:51,038 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:51,038 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:51,038 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:06:51,101 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 51, 77058)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:52,363 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"096f3ed3d7a95a9705c1d51c19bb4fdc","signature":"-xlBLwQpRrldbHAhrbpU_ez7jGXLrUkr7W2yBc0G6KI","encrypted_data":"pThYRtkEYC'
+2026-06-11 15:06:52,363 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:52,363 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:52,363 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:06:52,427 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 52, 403008)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:06:56,106 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"7b3ca951097218d0395a34fe7d064ba9","signature":"mLcpvdCvHUYYTnR-Dg3WeyOPdWuQQ2kB6E7A41xoqAU","encrypted_data":"LCsjzVaYoi'
+2026-06-11 15:06:56,107 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:06:56,107 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:06:56,107 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:06:56,163 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 6, 56, 150773)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:03,871 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"0e909c78a1e114434d4a348752a54fb2","signature":"EBqwi2Z-N-eYL5nxUgqu3WnekT_QinWz5U5Cj-dWNEc","encrypted_data":"w2KjqEobYf'
+2026-06-11 15:07:03,871 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:03,871 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:03,871 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:07:03,924 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 3, 912175)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:06,937 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:07:11,144 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"60bde46735c82fcf501240ca87e0b569","signature":"zh1OkWO0sHI4b1ztErew8pOf6EJGp01QFeiFNaiYQU4","encrypted_data":"fksFEL3c2k'
+2026-06-11 15:07:11,144 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:11,144 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:11,144 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:07:11,209 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 11, 187972)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:12,461 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"dc1db5177e9f903f668f196f5b0bd80e","signature":"jQ4ntFYvRhW3c7HhJlnCVdcxwblNTCENTma4db3kw5s","encrypted_data":"WAncPdCUQF'
+2026-06-11 15:07:12,461 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:12,462 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:12,462 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:07:12,527 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 12, 503332)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:16,196 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"e2ac27eb5ccf2e3bcb63c96d5c081fd5","signature":"WQhbHUE9NbI2wAynTxKjfNkKQ563T-OuTX97pIwHUMI","encrypted_data":"J6XcyJlP3D'
+2026-06-11 15:07:16,196 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:16,196 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:16,196 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:07:16,259 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 16, 234839)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:23,959 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"d3403f22a2a03a1d4fe9f416f9ce8dc3","signature":"WsiF_iqfhfyz-sicuZgxxDO6KgMMCPMW8-X08S31u0c","encrypted_data":"PO3LK2Lt33'
+2026-06-11 15:07:23,959 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:23,959 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:23,959 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:07:24,021 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 23, 997378)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:31,245 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"fdc469f1e5bc7172d1ce14500b8e1765","signature":"bq4X3OEK-OJk9o5g5TtNpvndgt7Uu4U6gzaE1QMI07Y","encrypted_data":"qf1paEQ8KH'
+2026-06-11 15:07:31,245 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:31,245 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:31,245 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:07:31,316 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 31, 285260)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:32,565 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"08a3289d4ef1519066c121b05664e85e","signature":"24qcAGIHUU2rtjybiXiPu8LAW_kmPmItIG36ot4htC4","encrypted_data":"R4H17VsylO'
+2026-06-11 15:07:32,565 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:32,565 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:32,565 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:07:32,645 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 32, 606773)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:36,293 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"f095872a1ce197ea8e025aa36c13195c","signature":"a5EgP9k1E6u-32i2hboZR3V8UizRQuMyUAqPabqVHIw","encrypted_data":"xkpnab7ky6'
+2026-06-11 15:07:36,293 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:36,293 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:36,293 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:07:36,342 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 36, 327034)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:44,065 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"1af68d281bf27a93b23dcadb5d55aefe","signature":"n7-aEaOU_iCKQupkGCmTsYEOWFhtkqbZ4PuVYbLzLfI","encrypted_data":"koA5Zhh+p6'
+2026-06-11 15:07:44,065 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:44,065 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:44,065 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:07:44,131 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 44, 103244)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:51,382 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"48194a7ab7e067d3196709188dac72b4","signature":"L2dKzWE59v5wG2j1ehQLlv0QZv8udH0sTFA5oFKnAok","encrypted_data":"lq8KECu6f5'
+2026-06-11 15:07:51,382 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:51,382 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:51,383 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:07:51,484 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 51, 426863)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:52,680 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"db106da688ee191b9d02a917d85cf76d","signature":"21V4BfDdNnZ2F4HmhkKLZbLYe0dCJIzU6pD_Z-g3-1o","encrypted_data":"dtQW5Q//1f'
+2026-06-11 15:07:52,680 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:52,680 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:52,680 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:07:52,744 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 52, 719328)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:07:56,392 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"ce3ec5b609335984b30f7e764454eb7c","signature":"k0tISc-t6iu5ucKzTA97cFocMrHbKGw0yCnpNS0HwX8","encrypted_data":"DdFxO1wjIp'
+2026-06-11 15:07:56,392 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:07:56,392 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:07:56,392 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:07:56,427 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你是', 'created_at': datetime.datetime(2026, 6, 11, 15, 7, 56, 409793)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:08:04,190 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"391863c58ce97ee65cdf54cef4cc5778","signature":"bGb1hlw_1VABNjvkivEoN-HIhmrlYuIYN_IYOtGjOzg","encrypted_data":"fxoE+76orU'
+2026-06-11 15:08:04,190 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:04,190 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:04,190 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:08:04,256 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑话。', 'created_at': datetime.datetime(2026, 6, 11, 15, 8, 4, 230579)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:08:07,022 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:08:11,534 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"507e7f12f038715cf8f7f85882f449ef","signature":"IMKyBkpN0AC3zGTBadZWIambASdI3d5WRj6wr0u815g","encrypted_data":"Xau9Sw/49+'
+2026-06-11 15:08:11,534 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:11,535 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:11,547 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:08:11,620 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '你好', 'created_at': datetime.datetime(2026, 6, 11, 15, 8, 11, 590529)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:08:12,783 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"33f746548144953774667c2fcce0212b","signature":"VnvVXrXmIdZYK5TbA2iAJIC4Puwe03dnwhu017Xq18Y","encrypted_data":"fJFJ+2Yc1F'
+2026-06-11 15:08:12,784 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:12,784 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:12,784 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:08:12,854 - v7ai-fast - ERROR - Error processing event: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "ix_chat_messages_message_id"
+DETAIL:  Key (message_id)=() already exists.
+
+[SQL: INSERT INTO chat_messages (session_id, message_id, role, content, created_at) VALUES (%(session_id)s, %(message_id)s, %(role)s, %(content)s, %(created_at)s) RETURNING chat_messages.id]
+[parameters: {'session_id': 8, 'message_id': '', 'role': 'user', 'content': '给我说个笑。', 'created_at': datetime.datetime(2026, 6, 11, 15, 8, 12, 832823)}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-06-11 15:08:15,538 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:08:16,465 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161373,"nonce":"20d484d2ebae6ca459baf7cd6fe46deb","signature":"OabX03f9zKG_C_5NKI5gEE1wSOWJV21wW5ApLcJZmLs","encrypted_data":"U7z7SZzd1k'
+2026-06-11 15:08:16,466 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:16,466 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:16,474 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你是
+2026-06-11 15:08:16,540 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:08:22,711 - v7ai-fast - INFO - DeepSeek response: 你好！我是 DeepSeek Chat，一个由深度求索公司创造的智能 AI 助手。很高兴为你服务！
+
+2026-06-11 15:08:22,726 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:08:23,250 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:08:24,271 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161525,"nonce":"5110d50d899e97113812f08cb6ff703e","signature":"PFS_HZ2lmnyWljG5KMaTjE6VzYWxyGaDIParRF81_Ek","encrypted_data":"yC5cv6ZPfd'
+2026-06-11 15:08:24,271 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:24,271 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:24,271 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑话。
+2026-06-11 15:08:24,326 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:08:30,135 - v7ai-fast - INFO - DeepSeek response: 一只闹钟暗恋床头柜上的手机，犹豫了好久终于鼓起勇气。
+闹钟说：“晚上……一起睡吧？”
+手机摇摇头：“
+2026-06-11 15:08:30,173 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:08:30,718 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:08:31,649 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161509,"nonce":"336d5ba05c68d8bf03b3861536c25e00","signature":"d0tHiJ63Bc2SW1McIM-EG5p9dCAori5FG8jTd3nsg9w","encrypted_data":"b1rEd9aCUs'
+2026-06-11 15:08:31,649 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:31,649 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:31,649 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你好
+2026-06-11 15:08:31,711 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:08:32,896 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161552,"nonce":"916554b99df973748a3e59a026d58520","signature":"VLH6Y1nBiT9pKweaVT3tePQJXf3Vn49TelP48ictcgg","encrypted_data":"uH2SvijjqV'
+2026-06-11 15:08:32,896 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:08:32,896 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:08:32,896 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 给我说个笑。
+2026-06-11 15:08:33,036 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:08:36,988 - v7ai-fast - INFO - DeepSeek response: 你好！😊 很高兴见到你！
+
+我是 DeepSeek，一个由深度求索公司创造的 AI 助手。无论你有什
+2026-06-11 15:08:37,030 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:08:37,583 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:08:40,783 - v7ai-fast - INFO - DeepSeek response: 来一个压箱底的，专治“笑点高”：
+
+一个人去医院看病，对医生说：“大夫，我最近总觉得自己是台微波炉，
+2026-06-11 15:08:40,821 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:08:41,357 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:10:28,535 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161829,"nonce":"dbe28e9ad006de7158a3643db8379f9d","signature":"v4h5SGLmL92rtMkxynlapM9i6zIH1IR3iLOlkQnjsoM","encrypted_data":"18igmrSMic'
+2026-06-11 15:10:28,535 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:10:28,535 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:10:28,535 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 你说了几个笑话？
+2026-06-11 15:10:28,584 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:10:28,767 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161829,"nonce":"410692a0c3e684728af335b9e0e76024","signature":"QD_ZEs65t5AGuG-_TzkVKlefFVNA04Y9Vo7XUN6etE8","encrypted_data":"omDWvBl2GRkKPISi'
+2026-06-11 15:10:28,767 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:10:28,768 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:10:28,768 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:10:28,768 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:10:36,504 - v7ai-fast - INFO - DeepSeek response: 哈哈，其实我一个笑话都还没讲呢！😄 刚才只是用“数据支撑”和“统计表明”的冷幽默自嘲了一下——毕竟A
+2026-06-11 15:10:36,521 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:10:36,997 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:11:04,372 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.xz.message","operation":"create","time":1781161864,"nonce":"22d5dac2cfe684a67ba32f598417cc36","signature":"A021xOUOJDPn7nsbJr5wOXC1mmJm8VVPyOaajhOio3s","encrypted_data":"bR2SI0yqTrSeAXqx'
+2026-06-11 15:11:04,372 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:11:04,372 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:11:04,373 - v7ai-fast - INFO - Processing message - chat_id: None, user_id: None, message: None
+2026-06-11 15:11:04,373 - v7ai-fast - WARNING - Missing chat_id or message_text
+2026-06-11 15:11:04,373 - v7ai-fast - INFO - Received WOA event: b'{"topic":"kso.app_chat.message","operation":"create","time":1781161864,"nonce":"036b8eb07603a0c6f8f7597b079e658f","signature":"eDk0RCHEgDC-voNPjQylQ4PgYZLiMSZBBWybXeHgveA","encrypted_data":"l+JmPDaJR4'
+2026-06-11 15:11:04,373 - v7ai-fast - INFO - Verifying signature...
+2026-06-11 15:11:04,373 - v7ai-fast - INFO - Signature OK, decrypting event data...
+2026-06-11 15:11:04,374 - v7ai-fast - INFO - Processing message - chat_id: 471955, user_id: 1218, message: 把你以上所有对话的会话id消息id chat的id都输出。
+2026-06-11 15:11:04,439 - v7ai-fast - INFO - Calling DeepSeek AI...
+2026-06-11 15:11:09,758 - v7ai-fast - INFO - DeepSeek response: 我没有之前对话的上下文，当前会话中这是第一条用户消息，因此没有“以上所有对话”的会话ID、消息ID或
+2026-06-11 15:11:09,779 - v7ai-fast - INFO - Sending response via WOA...
+2026-06-11 15:11:10,250 - v7ai-fast - INFO - Message sent successfully: True
+2026-06-11 15:11:42,172 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-11 15:38:55,176 - v7ai-fast - INFO - v7ai-fast service starting...

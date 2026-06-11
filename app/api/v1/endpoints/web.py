@@ -793,6 +793,7 @@ async def knowledge_page(request: Request):
     <div class="card">
         <div class="toolbar">
             <h2 style="flex:1;margin:0;">📋 文件列表</h2>
+            <button class="btn btn-ghost" onclick="indexAllFiles()" style="background:#f6ad55;color:#fff;">🔍 索引全部</button>
             <button class="btn btn-ghost" onclick="loadFiles()">🔄 刷新</button>
         </div>
         <div id="fileList"><div class="loading">加载中...</div></div>
@@ -825,7 +826,7 @@ async function loadFiles(){
             var sz = f.file_size < 1024 ? f.file_size+'B' : f.file_size < 1048576 ? (f.file_size/1024).toFixed(1)+'KB' : (f.file_size/1048576).toFixed(1)+'MB';
             var ts = f.created_at ? f.created_at.slice(0,16).replace('T',' ') : '';
             var fn = he(f.filename);
-            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="downloadFile('+f.id+',\''+fn+'\')">⬇下载</button> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑删除</button></td></tr>';
+            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="indexFile('+f.id+')" style="background:#f6ad55;color:#fff;border:none;">🔍 索引</button> <button class="btn btn-ghost btn-sm" onclick="downloadFile('+f.id+',\''+fn+'\')">⬇下载</button> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑删除</button></td></tr>';
         });
         h += '</tbody></table>';
         el.innerHTML = h;
@@ -852,6 +853,26 @@ async function downloadFile(id,name){
         var a = document.createElement("a");a.href=u;a.download=name;
         document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
     }catch(e){alert("下载失败: "+e.message);}
+}
+async function indexFile(id){
+    var btn = event.target; btn.disabled=true; btn.textContent="索引中...";
+    try{
+        var r = await fetch(API+"/files/"+id+"/index",{method:"POST"});
+        var d = await r.json();
+        if(r.ok){alert("索引完成: "+d.chunks+" 个分片");loadFiles();loadStats();}
+        else{alert("索引失败: "+(d.detail||"未知错误"));btn.disabled=false;btn.textContent="🔍 索引";}
+    }catch(e){alert("索引失败: "+e.message);btn.disabled=false;btn.textContent="🔍 索引";}
+}
+async function indexAllFiles(){
+    if(!confirm("将索引所有未索引的文件，可能需要几分钟。继续？"))return;
+    var btn = event.target; btn.disabled=true; btn.textContent="索引中...";
+    try{
+        var r = await fetch(API+"/files/index-all",{method:"POST"});
+        var d = await r.json();
+        alert(d.message);
+        loadFiles();loadStats();
+    }catch(e){alert("批量索引失败: "+e.message);}
+    btn.disabled=false; btn.textContent="🔍 索引全部";
 }
 async function deleteFile(id){
     if(!confirm("确定要删除这个文件吗？"))return;

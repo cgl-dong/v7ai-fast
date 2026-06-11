@@ -1,4 +1,5 @@
 """Service for managing chat sessions and messages."""
+import uuid
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List
@@ -28,6 +29,8 @@ class SessionService:
     
     def add_message(self, session_id: int, message_id: str, role: str, content: str):
         """Add a message to a session."""
+        if not message_id:
+            message_id = uuid.uuid4().hex
         message = ChatMessage(
             session_id=session_id,
             message_id=message_id,

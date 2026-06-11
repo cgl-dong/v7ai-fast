@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from minio import Minio
 from minio.error import S3Error
 
-from app.core.database import KnowledgeFile
+from app.core.database import KnowledgeFile, DocumentChunk
 from app.core.settings import settings
 
 ALLOWED_EXTENSIONS = {"txt", "pdf", "xlsx", "xls", "docx", "md", "csv"}
@@ -105,6 +105,8 @@ class KnowledgeService:
         except S3Error:
             pass
         
+        # Delete chunks first
+        self.db.query(DocumentChunk).filter(DocumentChunk.file_id == file_id).delete()
         self.db.delete(record)
         self.db.commit()
         return True

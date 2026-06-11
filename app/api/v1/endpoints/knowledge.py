@@ -1,15 +1,22 @@
-"""知识库文件上传/下载 API - MinIO"""
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+"""知识库文件上传/下载/索引 API"""
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.logging import logger
 from app.services.knowledge import KnowledgeService
+from app.services.indexer import Indexer
 from minio.error import S3Error
 from urllib.parse import quote
 import io
 
 router = APIRouter()
+
+
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
 
 
 def _to_file_info(f) -> dict:
@@ -88,3 +95,50 @@ async def delete_file(file_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="文件不存在")
     return {"message": "删除成功"}
+
+
+@router.post("/files/{file_id}/index")
+async def index_file(file_id: int, db: Session = Depends(get_db)):
+    """对文件进行向量索引（分片→Embedding→存储到pgvector）"""
+    indexer = Indexer(db)
+    try:
+        result = indexer.index_file(file_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"索引失败: {str(e)}")
+    return result
+
+
+@router.post("/files/index-all")
+async def index_all_files(db: Session = Depends(get_db)):
+    """批量索引所有未索引的文件"""
+    from app.core.database import KnowledgeFile
+    files = db.query(KnowledgeFile).filter(KnowledgeFile.status != "indexed").all()
+    if not files:
+        return {"message": "所有文件已索引", "count": 0}
+    
+    indexer = Indexer(db)
+    results = []
+    for f in files:
+        try:
+            r = indexer.index_file(f.id)
+            results.append({"id": f.id, "filename": f.filename, "status": "ok", "chunks": r.get("chunks", 0)})
+        except Exception as e:
+            results.append({"id": f.id, "filename": f.filename, "status": "error", "error": str(e)[:200]})
+    
+    ok_count = sum(1 for r in results if r["status"] == "ok")
+    err_count = sum(1 for r in results if r["status"] == "error")
+    return {"message": f"索引完成: {ok_count} 成功, {err_count} 失败", "count": len(results), "results": results}
+
+
+@router.post("/search")
+async def search_knowledge(req: SearchRequest, db: Session = Depends(get_db)):
+    """语义搜索知识库"""
+    if not req.query.strip():
+        raise HTTPException(status_code=400, detail="查询内容不能为空")
+    indexer = Indexer(db)
+    try:
+        results = indexer.search_chunks(req.query, req.top_k)
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
+    return {"query": req.query, "results": results, "count": len(results)}
