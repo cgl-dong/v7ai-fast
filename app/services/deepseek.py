@@ -1,7 +1,7 @@
 """AI service for chat completions, supporting config from database."""
 import asyncio
 import httpx
-from typing import Optional
+from typing import Optional, List
 
 from app.core.settings import settings
 
@@ -98,6 +98,24 @@ class AIService:
                     raise RuntimeError(str(e))
         
         raise RuntimeError("AI调用失败：已达到最大重试次数")
+
+    async def call_model_with_messages(self, messages: List[dict], temperature: float = 0.7) -> str:
+        """Call AI model with a list of messages (for agent use)."""
+        if not self.api_key:
+            raise RuntimeError("API key not configured")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        data = {"model": self.model, "temperature": temperature, "messages": messages}
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(self.api_url, headers=headers, json=data)
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
 
 
 # Keep backward compatibility

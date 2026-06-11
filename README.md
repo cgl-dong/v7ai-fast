@@ -1,158 +1,176 @@
 # v7ai-fast
 
-基于 FastAPI 构建的企业内部知识库智能问答助手平台，AI 辅助开发完成。
+基于 FastAPI + LangGraph 构建的企业内部知识库 RAG 智能问答助手平台，AI 辅助开发完成。
 
 ## 概述
 
-v7ai-fast 是一个面向企业内部的智能化知识管理与问答平台，集成 WOA（企业IM）消息回调、多模型 AI 对话、知识库文件管理等功能，为企业员工提供即时的智能问答服务和知识管理能力。
+v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA（企业IM）消息回调、**LangGraph RAG 智能体**、多模型 AI 对话、知识库文件管理等功能，为企业员工提供即时的智能问答和知识管理能力。
 
-核心能力：
+### 核心亮点
 
-- 通过 WOA 消息回调，员工在企业 IM 中直接向 AI 提问
-- 支持多模型切换（DeepSeek、OpenAI、自定义 API），灵活配置
-- 文件上传自动存储至 MinIO 对象存储，支持文档知识库管理
-- Web 聊天界面，支持多会话、会话持久化
-- 用户注册/登录，JWT 认证
+- 🧠 **LangGraph RAG Agent** — 智能判断是否检索知识库，自动路由：闲聊直接回答 vs 业务问题检索后回答
+- 💬 **WOA 企业IM 集成** — 员工在 IM 中 @机器人 即可提问，自动 AI 回复
+- 📚 **知识库管理** — 上传文档 → 自动分片 → pgvector 向量索引 → 语义检索
+- 🔍 **智能检索** — 相似度阈值过滤 + 内容去重 + Token 预算控制 + 来源标注
+- ⚙️ **多模型管理** — 动态切换 LLM/Embedding 模型，支持 OpenAI 兼容 API
+- 📝 **Prompt 模板管理** — 数据库管理提示词模板，一键切换激活
 
-## 功能特性
+## 系统架构
 
-### 核心功能
+```
+┌──────────────┐     ┌───────────────────────────────┐     ┌─────────────────┐
+│   WOA 企业IM  │────>│       FastAPI (v7ai-fast)      │────>│  DeepSeek / OpenAI│
+│  消息回调      │     │        端口: 18081              │     │  兼容 AI 服务    │
+└──────────────┘     └───────────────┬───────────────┘     └─────────────────┘
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           ▼                         ▼                          ▼
+  ┌────────────────┐    ┌──────────────────────┐    ┌──────────────────┐
+  │  PostgreSQL     │    │  MinIO (对象存储)      │    │  Web Chat UI     │
+  │  + pgvector     │    │  文件 + Embedding     │    │  + Admin Panel   │
+  └────────────────┘    └──────────────────────┘    └──────────────────┘
+```
 
-| 模块            | 功能         | 说明                                            |
-| ------------- | ---------- | --------------------------------------------- |
-| 🤖 **AI 对话**  | 智能问答       | 支持流式对话，可切换后端模型                                |
-| 📚 **知识库**    | 文件管理       | 上传/下载/删除文档，支持 TXT/PDF/Excel/Word/Markdown/CSV |
-| 💬 **WOA 集成** | 企业IM回调     | 接收 WOA 消息，自动 AI 回复，支持 KSO-1/WPS-3 签名          |
-| ⚙️ **模型管理**   | 动态切换       | 多模型配置，一键激活，支持自定义 API 地址/密钥                    |
-| 🔐 **用户认证**   | JWT        | 注册/登录，会话管理，Token 鉴权                           |
-| 💾 **数据持久化**  | PostgreSQL | 聊天记录、会话、模型配置、知识库文件记录全量持久化                     |
-| 🗄️ **对象存储**  | MinIO      | 文件存储于 MinIO S3 兼容存储，UUID 命名防冲突                |
+### RAG Pipeline
 
-### 模型支持
+```
+用户提问 → LangGraph Agent
+              │
+              ├─ classify ────── 闲聊 ──→ generate (直接回答)
+              │
+              └─ classify ────── 业务 ──→ retrieve (pgvector)
+                                              │
+                                              ▼
+                                         generate (带上下文回答)
+                                              │
+                                              ▼
+                                     [来源: xxx文档] 标注引用
+```
 
-- DeepSeek（deepseek-chat / deepseek-v4-pro 等）
-- OpenAI 兼容 API（支持 New API、One API 等网关）
-- 自定义 API 端点（自建模型服务）
+## 功能清单
+
+| 模块 | 状态 | 功能 |
+|------|------|------|
+| 🤖 **LangGraph RAG** | ✅ 已完成 | 智能路由 classify→retrieve→generate |
+| 💬 **AI 对话** | ✅ 已完成 | Web Chat + WOA IM 双通道 |
+| 📚 **知识库** | ✅ 已完成 | 上传/下载/删除/索引/检索 |
+| 🔍 **向量检索** | ✅ 已完成 | pgvector 语义搜索 + 相似度过滤 + 去重 |
+| ⚙️ **模型管理** | ✅ 已完成 | LLM/Embedding 多模型配置，一键激活 |
+| 📝 **Prompt 管理** | ✅ 已完成 | 提示词模板 CRUD + 激活 + 变量占位 |
+| 🔐 **用户认证** | ✅ 已完成 | JWT 登录/注册 |
+| 💾 **数据持久化** | ✅ 已完成 | PostgreSQL 全量持久化 |
+| 🗄️ **对象存储** | ✅ 已完成 | MinIO S3，文件 UUID 命名 |
+| 📊 **管理面板** | ✅ 已完成 | Admin 页面：模型配置 + 会话 + Prompt |
+| 🧠 **记忆系统** | 📋 规划中 | 多轮对话上下文 + 用户偏好 + 长期记忆 |
+| 🔌 **MCP 模块** | 📋 规划中 | Model Context Protocol，工具调用 |
+| 📈 **日志监控** | 📋 规划中 | 调用统计 + 成本分析 + 告警 |
 
 ## 项目结构
 
 ```
 v7ai-fast/
 ├── app/
-│   ├── api/                        # API 路由层
+│   ├── api/
 │   │   └── v1/
 │   │       ├── endpoints/
-│   │       │   ├── auth.py         # 认证 API（注册/登录/Token）
-│   │       │   ├── knowledge.py    # 知识库 API（上传/下载/列表/删除/统计）
+│   │       │   ├── auth.py         # 认证 API
+│   │       │   ├── knowledge.py    # 知识库 API（上传/索引/检索）
 │   │       │   ├── model.py        # 模型配置 CRUD API
-│   │       │   ├── web.py          # Web 页面路由 + 聊天 API
-│   │       │   └── woa.py          # WOA 事件回调 API
-│   │       └── __init__.py         # v1 路由聚合
-│   │   └── __init__.py             # 根路由
-│   ├── core/                       # 核心模块
-│   │   ├── database.py             # ORM 模型 + 数据库会话
+│   │       │   ├── prompt.py       # Prompt 模板 CRUD API
+│   │       │   ├── web.py          # Web 页面 + Chat API + Admin
+│   │       │   └── woa.py          # WOA 事件回调
+│   │       └── __init__.py
+│   │   └── __init__.py
+│   ├── core/
+│   │   ├── database.py             # 7 个 ORM 模型 (PostgreSQL)
 │   │   ├── logging.py              # 日志配置
-│   │   ├── security.py             # 安全工具（签名验证、加密解密）
-│   │   └── settings.py             # 配置管理（Pydantic Settings）
-│   ├── services/                   # 业务服务层
-│   │   ├── auth.py                 # JWT 认证服务
-│   │   ├── deepseek.py             # AI 模型调用服务
-│   │   ├── knowledge.py            # 知识库文件管理服务（MinIO SDK）
-│   │   ├── model_config.py         # 模型配置管理服务
-│   │   ├── session.py              # 会话管理服务
-│   │   └── woa.py                  # WOA 消息服务
-│   └── templates/                  # HTML 模板
+│   │   ├── security.py             # 签名验证 + 加密解密
+│   │   └── settings.py             # Pydantic Settings
+│   ├── services/
+│   │   ├── agent.py                # LangGraph RAG Agent
+│   │   ├── auth.py                 # JWT 认证
+│   │   ├── deepseek.py             # AI 模型调用（OpenAI 兼容）
+│   │   ├── embedding.py            # HuggingFace 向量化
+│   │   ├── indexer.py              # 文档解析 + 分片 + 向量存储
+│   │   ├── knowledge.py            # 知识库文件管理（MinIO）
+│   │   ├── model_config.py         # 模型配置管理
+│   │   ├── prompt.py               # Prompt 模板管理
+│   │   ├── session.py              # 会话管理
+│   │   └── woa.py                  # WOA 消息发送
+│   └── templates/
 │       ├── admin.html              # 管理面板
-│       ├── chat_full.html          # 聊天界面（含侧边栏）
-│       ├── knowledge.html          # 知识库管理页面
-│       ├── login.html              # 登录页面
-│       └── register.html           # 注册页面
-├── static/                         # 静态资源
-│   └── index.html
-├── main.py                         # 应用入口
-├── pyproject.toml                  # 项目配置（uv 管理）
-├── .env                            # 环境变量
-└── README.md
+│       ├── chat_full.html          # Chat UI
+│       ├── knowledge.html          # 知识库管理
+│       ├── login.html / register.html
+│       └── session_detail.html
+├── main.py
+├── pyproject.toml
+└── .env
 ```
 
-## 架构
+## 数据库模型
 
-```
-┌──────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│   WOA 企业IM  │────>│  FastAPI (v7ai-fast) │────>│  DeepSeek / 自建  │
-│  消息回调      │     │  端口: 18081          │     │  AI 模型服务      │
-└──────────────┘     └──────────┬───────────┘     └─────────────────┘
-                                │
-              ┌─────────────────┼─────────────────┐
-              ▼                 ▼                  ▼
-     ┌────────────┐   ┌──────────────┐   ┌──────────────┐
-     │ PostgreSQL │   │   MinIO      │   │  Web 浏览器   │
-     │ │   │  │   │  (Chat UI)   │
-     └────────────┘   └──────────────┘   └──────────────┘
-```
+| 表名 | 用途 |
+|------|------|
+| `users` | 用户认证 |
+| `chat_sessions` | 聊天会话 |
+| `chat_messages` | 聊天消息 |
+| `model_configs` | AI 模型配置 |
+| `knowledge_files` | 知识库文件记录 |
+| `document_chunks` | 文档分片向量 (pgvector) |
+| `prompt_templates` | Prompt 提示词模板 |
+| `system_settings` | 系统参数 |
+| `event_logs` | WOA 事件日志 |
+
+## API 端点
+
+| 前缀 | 功能 |
+|------|------|
+| `/api/v1/auth/*` | 注册/登录/Token |
+| `/api/v1/model/*` | 模型配置 CRUD |
+| `/api/v1/knowledge/*` | 文件上传/下载/索引/检索 |
+| `/api/v1/prompt/*` | Prompt 模板 CRUD |
+| `/callback/eventmsg` | WOA 事件回调 |
+| `/api/chat` | Web 聊天 |
+| `/admin` | 管理面板 |
 
 ## 技术栈
 
-| 组件                   | 用途          |
-| -------------------- | ----------- |
-| **FastAPI**          | Web 框架      |
-| **SQLAlchemy**       | ORM         |
-| **PostgreSQL**       | 数据库         |
-| **MinIO**            | 对象存储（S3 兼容） |
-| **Jinja2**           | 模板引擎        |
-| **Pydantic**         | 数据验证        |
-| **python-jose**      | JWT 认证      |
-| **passlib + bcrypt** | 密码哈希        |
-| **httpx**            | 异步 HTTP 客户端 |
-| **uv**               | 依赖管理        |
+| 类别 | 组件 |
+|------|------|
+| **框架** | FastAPI + Uvicorn |
+| **Agent** | LangGraph |
+| **LLM** | langchain-openai (DeepSeek / OpenAI 兼容) |
+| **Embedding** | sentence-transformers (all-MiniLM-L6-v2) |
+| **向量库** | pgvector (PostgreSQL 扩展) |
+| **存储** | MinIO (S3 兼容) |
+| **ORM** | SQLAlchemy 2.0 |
+| **认证** | python-jose (JWT) + passlib (bcrypt) |
+| **解析** | openpyxl + pypdf + python-docx |
+| **依赖** | uv |
 
 ## 快速开始
 
 ### 1. 环境要求
 
 - Python >= 3.11
-- PostgreSQL
-- MinIO
+- PostgreSQL + pgvector 扩展
+- MinIO 对象存储
 
-### 2. 安装依赖
+### 2. 安装
 
 ```bash
 uv sync
+cp .env.example .env  # 编辑配置
 ```
 
-### 3. 配置环境变量
+### 3. 数据库初始化
 
-编辑 `.env` 文件：
-
-```env
-# 服务配置
-SERVER_PORT=18081
-
-# WOA 配置
-WOA_CONFIG_APP_ID=你的APP_ID
-WOA_CONFIG_APP_KEY=你的APP_KEY
-WOA_HOST=
-
-# DeepSeek 配置
-DEEPSEEK_API_KEY=你的API_KEY
-DEEPSEEK_MODEL=deepseek-chat
-
-# 数据库（PostgreSQL）
-DB_HOST=
-DB_PORT=5432
-DB_USER=admin
-DB_PASSWORD=你的密码
-DB_NAME=appdb
-
-# MinIO 对象存储
-MINIO_ENDPOINT=
-MINIO_ACCESS_KEY=
-MINIO_SECRET_KEY=
-MINIO_BUCKET=knowledge-base
-MINIO_SECURE=false
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-### 4. 启动服务
+### 4. 启动
 
 ```bash
 uv run uvicorn main:app --host 0.0.0.0 --port 18081 --reload
@@ -160,28 +178,12 @@ uv run uvicorn main:app --host 0.0.0.0 --port 18081 --reload
 
 ### 5. 访问
 
-| 地址                                 | 说明             |
-| ---------------------------------- | -------------- |
-| `http://localhost:18081/`          | 健康检查           |
-| `http://localhost:18081/chat`      | 聊天界面           |
-| `http://localhost:18081/knowledge` | 知识库管理          |
-| `http://localhost:18081/admin`     | 管理面板           |
-| `http://localhost:18081/docs`      | Swagger API 文档 |
-
-## 依赖中间件部署
-
-### MinIO
-
-```bash
-docker run -d --name minio \
-  -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin \
-  -e MINIO_ROOT_PASSWORD=minioadmin \
-  -v /data/minio:/data \
-  minio/minio:RELEASE.2024-08-03T04-33-23Z server /data --console-address ":9001"
-```
-
-安装后访问 `9001` 创建 Bucket `knowledge-base`。
+| URL | 说明 |
+|-----|------|
+| `http://localhost:18081/chat` | 聊天界面 |
+| `http://localhost:18081/knowledge` | 知识库管理 |
+| `http://localhost:18081/admin` | 管理面板 |
+| `http://localhost:18081/docs` | API 文档 |
 
 ## License
 

@@ -155,6 +155,23 @@ class KnowledgeFile(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class PromptTemplate(Base):
+    """Prompt 模板管理"""
+    __tablename__ = "prompt_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, comment="模板名称(唯一标识)")
+    description = Column(String(500), comment="模板描述")
+    category = Column(String(50), default="general", index=True, comment="分类: general/rag/code/custom")
+    system_prompt = Column(Text, nullable=False, comment="系统提示词")
+    user_prompt = Column(Text, comment="用户提示词模板, 支持 {question} {context} {chat_history} 占位符")
+    variables = Column(Text, comment="JSON: 变量定义及默认值")
+    is_active = Column(Boolean, default=True, comment="是否启用")
+    sort_order = Column(Integer, default=0, comment="排序")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 # -- Helpers ---------------------------------------------------------
 
 def init_db():
