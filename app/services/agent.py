@@ -1,4 +1,4 @@
-"""LangGraph RAG Agent — knowledge-base aware AI assistant."""
+"""LangGraph RAG Agent — knowledge-base aware AI assistant with observability tracing."""
 import json
 import logging
 from typing import TypedDict, List, Optional, Literal, Annotated
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.services.deepseek import AIService
 from app.services.indexer import Indexer
 from app.services.model_config import ModelConfigService
+from app.services.observability import Tracer
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class RAGState(TypedDict):
     question: str
     messages: List[dict]
     needs_kb: bool
+    kb_id: Optional[int]
     kb_results: List[dict]
     context: str
     answer: str
@@ -46,9 +48,12 @@ class RAGState(TypedDict):
 class RAGAgent:
     """High-level wrapper: LangGraph RAG agent for enterprise knowledge Q&A."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, session_id: str = ""):
         self.db = db
         self.ai = _get_ai_service(db)
+        self.tracer = Tracer(db)
+        self.session_id = session_id
+        self.model_name = self.ai.model
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -81,35 +86,48 @@ class RAGAgent:
 
 输出JSON: {{"need_kb": true/false, "reason": "理由"}}"""
 
-        try:
-            answer = await self.ai.call_model(prompt)
-            json_str = answer.strip()
-            if "```" in json_str:
-                json_str = json_str.split("```")[1].replace("json", "", 1)
-            result = json.loads(json_str)
-            return {"needs_kb": result.get("need_kb", False)}
-        except Exception as e:
-            logger.warning(f"Classify failed: {e}")
-            return {"needs_kb": True}
+        with self.tracer.trace("classify", self.session_id, "agent_node", self.model_name) as ctx:
+            ctx.input = state["question"]
+            try:
+                answer = await self.ai.call_model(prompt)
+                json_str = answer.strip()
+                if "```" in json_str:
+                    json_str = json_str.split("```")[1].replace("json", "", 1)
+                result = json.loads(json_str)
+                needs_kb = result.get("need_kb", False)
+                ctx.output = f"needs_kb={needs_kb}"
+                ctx.metadata["reason"] = result.get("reason", "")
+                return {"needs_kb": needs_kb}
+            except Exception as e:
+                logger.warning(f"Classify failed: {e}")
+                return {"needs_kb": True}
 
     async def _retrieve_node(self, state: RAGState) -> dict:
         if not state.get("needs_kb"):
             return {"kb_results": [], "context": ""}
-        try:
-            indexer = Indexer(self.db)
-            results = indexer.search_chunks(state["question"], top_k=5)
-            context = _format_context(results)
-            logger.info(f"Retrieved {len(results)} chunks")
-            return {"kb_results": results, "context": context}
-        except Exception as e:
-            logger.error(f"Retrieve error: {e}")
-            return {"kb_results": [], "context": "", "error": str(e)}
+
+        kb_id = state.get("kb_id")
+        with self.tracer.trace("retrieve", self.session_id, "agent_node", "",
+                               {"needs_kb": state.get("needs_kb"), "kb_id": kb_id}) as ctx:
+            ctx.input = state["question"][:200]
+            try:
+                indexer = Indexer(self.db)
+                results = indexer.search_chunks(state["question"], top_k=5, kb_id=kb_id)
+                context = _format_context(results)
+                ctx.output = f"found {len(results)} chunks"
+                ctx.metadata["chunk_count"] = len(results)
+                logger.info(f"Retrieved {len(results)} chunks (kb_id={kb_id})")
+                return {"kb_results": results, "context": context}
+            except Exception as e:
+                logger.error(f"Retrieve error: {e}")
+                return {"kb_results": [], "context": "", "error": str(e)}
 
     async def _generate_node(self, state: RAGState) -> dict:
         question = state["question"]
         context = state.get("context", "")
 
-        if context:
+        has_context = bool(context)
+        if has_context:
             prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
 
 知识库内容:
@@ -121,19 +139,45 @@ class RAGAgent:
         else:
             prompt = f"问题: {question}\n\n用中文简洁回答。"
 
-        try:
-            answer = await self.ai.call_model(prompt)
-            return {"answer": answer}
-        except Exception as e:
-            logger.error(f"Generate error: {e}")
-            return {"answer": f"生成回答出错: {e}", "error": str(e)}
+        node_name = "generate_with_docs" if has_context else "generate_no_docs"
+        with self.tracer.trace(node_name, self.session_id, "agent_node", self.model_name,
+                               {"has_context": has_context}) as ctx:
+            ctx.input = question[:200]
+            try:
+                answer = await self.ai.call_model(prompt)
+                ctx.output = answer[:500]
+                return {"answer": answer}
+            except Exception as e:
+                logger.error(f"Generate error: {e}")
+                return {"answer": f"生成回答出错: {e}", "error": str(e)}
 
-    async def run(self, message: str, chat_history: List[dict] = None) -> str:
-        """Main entry point: question → graph → answer."""
+    async def run(self, message: str, chat_history: List[dict] = None, use_kb: bool = True, kb_id: int = None) -> str:
+        """Main entry point: question → graph → answer.
+
+        Args:
+            message: User question
+            chat_history: Previous conversation turns
+            use_kb: If False, skip retrieval entirely and answer directly
+            kb_id: Optional knowledge base ID to scope retrieval
+        """
+        # Fast path: user wants direct answer without RAG
+        if not use_kb:
+            with self.tracer.trace("generate_direct", self.session_id, "agent_node", self.model_name,
+                                   {"use_kb": False}) as ctx:
+                ctx.input = message[:200]
+                try:
+                    answer = await self.ai.call_model(message)
+                    ctx.output = answer[:500]
+                    return answer
+                except Exception as e:
+                    logger.error(f"Direct answer error: {e}")
+                    return f"生成回答出错: {e}"
+
         state: RAGState = {
             "question": message,
             "messages": chat_history or [],
             "needs_kb": False,
+            "kb_id": kb_id,
             "kb_results": [],
             "context": "",
             "answer": "",
@@ -144,7 +188,12 @@ class RAGAgent:
             return result.get("answer", "未能生成回答")
         except Exception as e:
             logger.error(f"Agent error: {e}")
-            try:
-                return await self.ai.call_model(message)
-            except Exception:
-                return f"处理失败: {e}"
+            with self.tracer.trace("fallback", self.session_id, "agent_node", self.model_name) as ctx:
+                ctx.input = message[:200]
+                try:
+                    answer = await self.ai.call_model(message)
+                    ctx.output = answer[:500]
+                    return answer
+                except Exception as fe:
+                    ctx.metadata["fallback_error"] = str(fe)
+                    return f"处理失败: {e}"

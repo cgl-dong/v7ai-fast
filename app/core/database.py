@@ -137,11 +137,24 @@ class SystemSetting(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class KnowledgeBase(Base):
+    """知识库分类"""
+    __tablename__ = "knowledge_bases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, comment="知识库名称")
+    description = Column(String(500), comment="知识库描述")
+    is_active = Column(Boolean, default=True, comment="是否启用")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class KnowledgeFile(Base):
     """知识库文件记录"""
     __tablename__ = "knowledge_files"
 
     id = Column(Integer, primary_key=True, index=True)
+    kb_id = Column(Integer, ForeignKey("knowledge_bases.id", ondelete="SET NULL"), nullable=True, index=True, comment="所属知识库ID")
     filename = Column(String(500), nullable=False, comment="原始文件名")
     stored_name = Column(String(500), nullable=False, comment="MinIO存储对象名")
     file_type = Column(String(20), nullable=False, index=True, comment="文件类型: txt/pdf/xlsx/docx/md/csv")
@@ -170,6 +183,26 @@ class PromptTemplate(Base):
     sort_order = Column(Integer, default=0, comment="排序")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class AITrace(Base):
+    """AI 调用链路追踪 - 可观测性数据"""
+    __tablename__ = "ai_traces"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trace_id = Column(String(50), nullable=False, index=True, comment="追踪ID(UUID)")
+    session_id = Column(String(100), index=True, comment="会话ID")
+    node_name = Column(String(50), nullable=False, index=True, comment="节点: classify/retrieve/generate/fallback")
+    trace_type = Column(String(20), default="agent_node", comment="类型: agent_node/llm_call/tool_call")
+    model_name = Column(String(100), comment="使用的模型名称")
+    input_summary = Column(Text, comment="输入摘要(前200字符)")
+    output_summary = Column(Text, comment="输出摘要(前500字符)")
+    status = Column(String(20), default="success", index=True, comment="状态: success/error")
+    latency_ms = Column(Integer, default=0, comment="耗时(毫秒)")
+    token_count = Column(Integer, default=0, comment="Token消耗估算")
+    error_msg = Column(Text, comment="错误信息")
+    metadata_json = Column(Text, comment="元数据JSON")
+    created_at = Column(DateTime, default=datetime.now)
 
 
 # -- Helpers ---------------------------------------------------------

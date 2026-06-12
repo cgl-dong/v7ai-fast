@@ -27,5 +27,9 @@ venv/
 .coverage
 htmlcov/
 
+minio_data/
+postgres_data/
+postgres/
+data/
 # Lock files (optional, lock versions in pyproject.toml instead)
 # uv.lock

@@ -4,24 +4,49 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import Optional
 import os
 
-from app.core.database import get_db, init_db
-from app.core.database import ChatMessage
+from app.core.database import get_db, init_db, ChatMessage, ChatSession, User
 from app.core.logging import logger
+from app.core.settings import settings
 from app.services.session import SessionService
 from app.services.agent import RAGAgent
 from app.services.auth import AuthService
 from app.services.model_config import ModelConfigService
+from app.api.v1.endpoints.auth import get_current_user
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 templates.env.cache_size = 0
 
 
-def _get_agent(db: Session) -> RAGAgent:
-    """Create RAGAgent with database session for retrieval."""
-    return RAGAgent(db)
+async def get_optional_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
+    """Extract user from Authorization header or access_token cookie. Returns None if not logged in."""
+    # Try Authorization header
+    auth = request.headers.get("Authorization", "")
+    token = None
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+    # Try cookie
+    if not token:
+        token = request.cookies.get("access_token", "")
+    if not token:
+        return None
+    try:
+        from jose import jwt
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        username = payload.get("sub")
+        if username:
+            return AuthService(db).get_user(username=username)
+    except Exception:
+        pass
+    return None
+
+
+def _get_agent(db: Session, session_id: str = "") -> RAGAgent:
+    """Create RAGAgent with database session for retrieval + tracing."""
+    return RAGAgent(db, session_id=session_id)
 
 ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -120,6 +145,8 @@ ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
         <h1>v7ai-fast Admin</h1>
         <div class="nav">
             <a href="/chat">Chat</a>
+            <a href="/knowledge">Knowledge</a>
+            <a href="/observability">Observability</a>
             <a href="/admin">Admin</a>
         </div>
     </div>
@@ -508,6 +535,57 @@ async def login_page(request: Request):
     return HTMLResponse(content=html_content)
 
 
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page."""
+    return HTMLResponse(content=r"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>登录 - v7ai-fast</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
+        .card{background:#fff;border-radius:12px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .card h1{text-align:center;margin-bottom:24px;color:#333}
+        .card input{width:100%;padding:12px 16px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none}
+        .card input:focus{border-color:#667eea}
+        .card button{width:100%;padding:12px;background:#667eea;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:8px}
+        .card button:hover{background:#5a6fd6}
+        .error{color:#ff4d4f;font-size:13px;margin-bottom:8px;display:none}
+        .link{text-align:center;margin-top:16px;font-size:13px}
+        .link a{color:#667eea;text-decoration:none}
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>v7ai-fast 登录</h1>
+    <div class="error" id="error">用户名或密码错误</div>
+    <input type="text" id="username" placeholder="用户名" autofocus>
+    <input type="password" id="password" placeholder="密码">
+    <button onclick="login()">登 录</button>
+</div>
+<script>
+async function login(){
+    var u=document.getElementById("username").value.trim();
+    var p=document.getElementById("password").value.trim();
+    if(!u||!p)return;
+    var form=new FormData();form.append("username",u);form.append("password",p);
+    try{
+        var r=await fetch("/api/v1/auth/token",{method:"POST",body:form});
+        if(!r.ok){document.getElementById("error").style.display="block";return}
+        var d=await r.json();
+        localStorage.setItem("token",d.access_token);
+        localStorage.setItem("username",d.username);
+        window.location.href="/chat";
+    }catch(e){document.getElementById("error").style.display="block"}
+}
+document.getElementById("password").addEventListener("keypress",function(e){if(e.key==="Enter")login()});
+</script>
+</body>
+</html>""")
+
+
 @router.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request, db: Session = Depends(get_db)):
     """Chat interface page with session list."""
@@ -530,10 +608,23 @@ async def chat_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/api/get-sessions")
-async def get_sessions(db: Session = Depends(get_db)):
-    """Get all chat sessions with message preview."""
-    session_service = SessionService(db)
-    sessions = session_service.get_sessions(limit=50)
+async def get_sessions(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Get chat sessions for current user (or all if anonymous)."""
+    if user:
+        sessions = (
+            db.query(ChatSession)
+            .filter(ChatSession.user_id == str(user.id))
+            .order_by(ChatSession.created_at.desc())
+            .limit(50)
+            .all()
+        )
+    else:
+        session_service = SessionService(db)
+        sessions = session_service.get_sessions(limit=50)
 
     result = []
     for s in sessions:
@@ -571,27 +662,51 @@ async def get_messages(session_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/create-session")
-async def create_session(db: Session = Depends(get_db)):
-    """Create a new empty chat session."""
+async def create_session(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Create a new empty chat session, bound to current user."""
     session_service = SessionService(db)
-    session_id = "web-" + str(datetime.now().timestamp())
-    session = session_service.get_or_create_session(session_id)
+    username = user.username if user else "anonymous"
+    user_id = str(user.id) if user else "anonymous"
+    timestamp = str(datetime.now().timestamp())
+    session_id = f"{username}-web-{timestamp}"
+    session = session_service.get_or_create_session(session_id, user_id)
+    if user:
+        session.user_id = user_id
+        session.user_name = username
+        db.commit()
     return {"session_id": session.chat_id}
 
 
 @router.post("/api/chat")
-async def chat_message(request: Request, db: Session = Depends(get_db)):
+async def chat_message(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
     """Handle chat message via LangGraph RAG Agent."""
     data = await request.json()
     message = data.get("message", "")
-    session_id = data.get("session_id", "web-" + str(datetime.now().timestamp()))
+    username_prefix = (user.username if user else "anonymous") + "-web-"
+    session_id = data.get("session_id", username_prefix + str(datetime.now().timestamp()))
+    use_kb = data.get("use_kb", True)
+    kb_id = data.get("kb_id")
     
     session_service = SessionService(db)
-    session = session_service.get_or_create_session(session_id)
+    user_id = str(user.id) if user else "anonymous"
+    session = session_service.get_or_create_session(session_id, user_id)
+    # Bind user info
+    if user and not session.user_id:
+        session.user_id = user_id
+        session.user_name = user.username
+        db.commit()
     session_service.add_message(session.id, str(datetime.now().timestamp()), "user", message)
     
-    agent = _get_agent(db)
-    answer = await agent.run(message)
+    agent = _get_agent(db, session_id=session_id)
+    answer = await agent.run(message, use_kb=use_kb, kb_id=kb_id)
     
     session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", answer)
     
@@ -766,6 +881,14 @@ async def knowledge_page(request: Request):
         <div class="stat-item"><div class="num" id="statMd">0</div><div class="label">Markdown</div></div>
     </div>
     <div class="card">
+        <div class="toolbar">
+            <h2 style="flex:1;margin:0;">📂 知识库分类</h2>
+            <input type="text" id="kbNameInput" placeholder="新建知识库名称" style="padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;">
+            <button class="btn btn-ghost" onclick="createKB()" style="background:#52c41a;color:#fff;border:none;">+ 创建</button>
+        </div>
+        <div id="kbList" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="card">
         <h2>📤 上传文件</h2>
         <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
             <div class="icon">📁</div>
@@ -875,7 +998,151 @@ function sl(s){return {uploaded:'已上传',indexed:'已索引',error:'失败'}[
     ua.addEventListener("drop",function(e){e.preventDefault();ua.classList.remove("dragover");handleUpload(e.dataTransfer.files[0]);});
 })();
 function logout(){document.cookie="access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";}
+async function loadKBList(){
+    try{
+        var r=await fetch(API+"/kb");var d=await r.json();
+        var el=document.getElementById("kbList");el.innerHTML="";
+        d.knowledge_bases.forEach(function(k){
+            el.innerHTML+='<div style="padding:6px 14px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px;"><span>'+k.name+'</span><span style="color:#999;font-size:11px;">'+(k.description||"")+'</span><button class="btn btn-danger btn-sm" onclick="deleteKB('+k.id+')" style="padding:2px 8px;font-size:11px;">×</button></div>';
+        });
+    }catch(e){console.error(e)}
+}
+async function createKB(){
+    var name=document.getElementById("kbNameInput").value.trim();
+    if(!name){alert("请输入名称");return;}
+    try{
+        var r=await fetch(API+"/kb",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name})});
+        if(r.ok){document.getElementById("kbNameInput").value="";loadKBList();loadFiles();}
+        else{alert("创建失败");}
+    }catch(e){alert("创建失败: "+e.message)}
+}
+async function deleteKB(id){
+    if(!confirm("删除知识库不会删除文件，文件将变为未分类。继续？"))return;
+    try{await fetch(API+"/kb/"+id,{method:"DELETE"});loadKBList();loadFiles();}
+    catch(e){alert("删除失败: "+e.message)}
+}
+async function moveFileToKb(fileId,kbId){
+    try{
+        var r=await fetch(API+"/files/"+fileId+"/move",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({kb_id:kbId})});
+        if(r.ok)loadFiles();else alert("移动失败");
+    }catch(e){alert("移动失败: "+e.message)}
+}
+loadKBList();
 loadStats();loadFiles();
+</script>
+</body>
+</html>""")
+
+
+@router.get("/observability", response_class=HTMLResponse)
+async def observability_page(request: Request):
+    """Observability traces viewer."""
+    return HTMLResponse(content=r"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>可观测性 - v7ai-fast</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+        .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+        .header h1{font-size:20px}
+        .header nav a{color:#fff;text-decoration:none;margin-left:20px;padding:6px 14px;border-radius:4px;background:rgba(255,255,255,.2)}
+        .container{max-width:1200px;margin:24px auto;padding:0 16px}
+        .card{background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .card h2{font-size:18px;margin-bottom:16px}
+        .stats-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+        .stat-item{flex:1;min-width:120px;background:#fff;border-radius:8px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .stat-item .num{font-size:28px;font-weight:bold;color:#667eea}
+        .stat-item .label{font-size:13px;color:#999;margin-top:4px}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{text-align:left;padding:10px 8px;background:#fafafa;border-bottom:2px solid #f0f0f0;font-weight:600;color:#666}
+        td{padding:8px;border-bottom:1px solid #f0f0f0}
+        tr:hover{background:#f8f9ff}
+        .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px}
+        .badge-success{background:#f6ffed;color:#52c41a}
+        .badge-error{background:#fff2f0;color:#ff4d4f}
+        .node-classify{color:#722ed1}
+        .node-retrieve{color:#1890ff}
+        .node-generate{color:#52c41a}
+        .node-fallback{color:#fa8c16}
+        .toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+        .btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:13px;background:#667eea;color:#fff}
+        .btn:hover{opacity:.85}
+        select{padding:6px 10px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px}
+        .trace-id{font-family:monospace;font-size:12px;color:#999}
+        .preview{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>📊 可观测性面板 (Observability)</h1>
+    <nav>
+        <a href="/chat">💬 聊天</a>
+        <a href="/knowledge">📚 知识库</a>
+        <a href="/admin">⚙️ 控制面板</a>
+    </nav>
+</div>
+<div class="container">
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-item"><div class="num" id="statTotal">0</div><div class="label">总追踪数</div></div>
+        <div class="stat-item"><div class="num" id="statSuccess">0</div><div class="label">成功</div></div>
+        <div class="stat-item"><div class="num" id="statError">0</div><div class="label">失败</div></div>
+        <div class="stat-item"><div class="num" id="statAvgLatency">0ms</div><div class="label">平均延迟</div></div>
+    </div>
+    <div class="card">
+        <div class="toolbar">
+            <h2 style="flex:1;margin:0">📋 AI 调用链路追踪</h2>
+            <select id="filterNode" onchange="loadTraces()">
+                <option value="">全部节点</option>
+                <option value="classify">classify</option>
+                <option value="retrieve">retrieve</option>
+                <option value="generate_with_docs">generate_with_docs</option>
+                <option value="generate_no_docs">generate_no_docs</option>
+                <option value="fallback">fallback</option>
+            </select>
+            <button class="btn" onclick="loadTraces()">🔄 刷新</button>
+        </div>
+        <div id="traceList">加载中...</div>
+    </div>
+</div>
+<script>
+const API="/api/v1/observability";
+async function loadStats(){
+    try{
+        var r=await fetch(API+"/traces/stats");
+        var d=await r.json();
+        document.getElementById("statTotal").textContent=d.total||0;
+        document.getElementById("statSuccess").textContent=d.success||0;
+        document.getElementById("statError").textContent=d.error||0;
+        document.getElementById("statAvgLatency").textContent=d.avg_latency_ms+"ms";
+    }catch(e){console.error(e)}
+}
+async function loadTraces(){
+    var el=document.getElementById("traceList");
+    el.innerHTML="加载中...";
+    var node=document.getElementById("filterNode").value;
+    var url=API+"/traces?limit=50";
+    if(node)url+="&node_name="+node;
+    try{
+        var r=await fetch(url);
+        var d=await r.json();
+        if(!d.traces||d.traces.length===0){el.innerHTML='<div style="text-align:center;padding:40px;color:#999">暂无追踪数据，尝试发送一条消息后再查看</div>';return}
+        var h='<table><thead><tr><th>时间</th><th>Trace ID</th><th>节点</th><th>输入</th><th>输出</th><th>延迟</th><th>状态</th></tr></thead><tbody>';
+        d.traces.forEach(function(t){
+            var time=t.created_at?t.created_at.slice(11,19):"";
+            var nodeClass="node-"+t.node_name.replace("_with_docs","").replace("_no_docs","");
+            var statusClass=t.status==="success"?"badge-success":"badge-error";
+            var statusText=t.status==="success"?"成功":"失败";
+            var latency=t.latency_ms+"ms";
+            h+='<tr><td>'+time+'</td><td><span class="trace-id">'+t.trace_id+'</span></td><td class="'+nodeClass+'">'+t.node_name+'</td><td class="preview" title="'+he(t.input_summary||"")+'">'+he((t.input_summary||"").slice(0,40))+'</td><td class="preview" title="'+he(t.output_summary||"")+'">'+he((t.output_summary||"").slice(0,40))+'</td><td>'+latency+'</td><td><span class="badge '+statusClass+'">'+statusText+'</span>'+(t.error_msg?'<br><small style="color:#ff4d4f">'+he(t.error_msg.slice(0,30))+'</small>':'')+'</td></tr>';
+        });
+        h+='</tbody></table>';
+        el.innerHTML=h;
+    }catch(e){el.innerHTML='<div style="text-align:center;padding:40px;color:#ff4d4f">加载失败: '+e.message+'</div>'}
+}
+function he(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+loadStats();loadTraces();
 </script>
 </body>
 </html>""")

@@ -62,7 +62,7 @@ async def handle_event(request: Request, db: Session = Depends(get_db)):
         session_service.add_message(session.id, event.get("message", {}).get("id", ""), "user", message_text)
         
         logger.info("Running LangGraph RAG Agent...")
-        agent = RAGAgent(db)
+        agent = RAGAgent(db, session_id=chat_id or "woa")
         answer = await agent.run(message_text)
         logger.info(f"Agent response: {answer[:50] if answer else None}")
         

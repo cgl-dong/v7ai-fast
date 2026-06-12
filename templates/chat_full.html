@@ -30,12 +30,16 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .user-message { background: #667eea; color: white; align-self: flex-end; }
         .assistant-message { background: white; color: #333; align-self: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .chat-input { background: white; padding: 15px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; }
+        .chat-input { background: white; padding: 15px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: center; }
         .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 25px; font-size: 16px; outline: none; transition: border-color 0.3s; }
         .chat-input input:focus { border-color: #667eea; }
-        .chat-input button { padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; }
+        .chat-input button { padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; white-space: nowrap; }
         .chat-input button:hover { transform: scale(1.05); }
         .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .kb-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; cursor: pointer; white-space: nowrap; user-select: none; }
+        .kb-toggle input { width: 16px; height: 16px; cursor: pointer; }
+        .kb-toggle.on { color: #52c41a; }
+        .kb-select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 20px; font-size: 13px; background: #fff; cursor: pointer; max-width: 120px; }
         .typing-indicator { font-style: italic; color: #888; align-self: flex-start; padding: 12px 16px; }
         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af; }
         .empty-state h3 { margin-bottom: 10px; }
@@ -47,6 +51,7 @@
             <h1>🤖 v7ai-fast</h1>
             <div class="user-info" id="user-info">加载中...</div>
             <button class="admin-btn" onclick="location.href='/knowledge'">📚 知识库</button>
+            <button class="admin-btn" onclick="location.href='/observability'" style="background:#f6ad55;">📊 可观测性</button>
             <button class="admin-btn" onclick="location.href='/admin'">⚙️ 控制面板</button>
             <button class="logout-btn" onclick="logout()">登出</button>
         </div>
@@ -68,14 +73,50 @@
         </div>
         <div class="chat-input">
             <input type="text" id="message-input" placeholder="输入消息..." autocomplete="off">
+            <select class="kb-select" id="kbSelect" onchange="updateKb()">
+                <option value="">全部知识库</option>
+            </select>
+            <label class="kb-toggle on" id="kbToggle" title="开启后AI会检索知识库文档回答问题">
+                <input type="checkbox" id="useKb" checked onchange="toggleKb()"> 📚
+            </label>
             <button id="send-button" disabled>发送</button>
         </div>
     </div>
 
     <script>
         var currentSessionId = null;
+        var useKb = true;
+        var kbId = null;
+        
+        function toggleKb() {
+            useKb = document.getElementById('useKb').checked;
+            var label = document.getElementById('kbToggle');
+            if (useKb) { label.classList.add('on'); }
+            else { label.classList.remove('on'); }
+        }
+        function updateKb() {
+            var val = document.getElementById('kbSelect').value;
+            kbId = val ? parseInt(val) : null;
+        }
+        async function loadKbList() {
+            try {
+                var r = await fetch('/api/v1/knowledge/kb');
+                var d = await r.json();
+                var sel = document.getElementById('kbSelect');
+                d.knowledge_bases.forEach(function(k) {
+                    sel.innerHTML += '<option value="'+k.id+'">'+k.name+'</option>';
+                });
+            } catch(e) { console.error(e); }
+        }
         var username = localStorage.getItem('username') || 'Guest';
+        var token = localStorage.getItem('token') || '';
         document.getElementById('user-info').textContent = '用户: ' + username;
+        
+        function authHeaders() {
+            var h = { 'Content-Type': 'application/json' };
+            if (token) { h['Authorization'] = 'Bearer ' + token; }
+            return h;
+        }
         
         async function loadSession(sessionId) {
             currentSessionId = sessionId;
@@ -88,7 +129,7 @@
             document.getElementById('current-session').textContent = sessionId.slice(0, 28);
             document.getElementById('send-button').disabled = false;
             
-            var response = await fetch('/api/get-messages?session_id=' + sessionId);
+            var response = await fetch('/api/get-messages?session_id=' + sessionId, { headers: authHeaders() });
             var data = await response.json();
             
             var messagesContainer = document.getElementById('messages');
@@ -112,7 +153,7 @@
         
         async function newChat() {
             // 在后端创建新会话
-            var response = await fetch('/api/create-session', { method: 'POST' });
+            var response = await fetch('/api/create-session', { method: 'POST', headers: authHeaders() });
             var data = await response.json();
             currentSessionId = data.session_id;
             
@@ -137,7 +178,7 @@
             
             // 如果还没有会话，先创建一个
             if (!currentSessionId) {
-                var resp = await fetch('/api/create-session', { method: 'POST' });
+                var resp = await fetch('/api/create-session', { method: 'POST', headers: authHeaders() });
                 var d = await resp.json();
                 currentSessionId = d.session_id;
             }
@@ -159,8 +200,8 @@
             try {
                 var response = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message, session_id: currentSessionId })
+                    headers: authHeaders(),
+                    body: JSON.stringify({ message: message, session_id: currentSessionId, use_kb: useKb, kb_id: kbId })
                 });
                 
                 var data = await response.json();
@@ -188,7 +229,7 @@
         }
         
         async function refreshSessions() {
-            var response = await fetch('/api/get-sessions');
+            var response = await fetch('/api/get-sessions', { headers: authHeaders() });
             var data = await response.json();
             
             var sessionsList = document.getElementById('sessions-list');
@@ -211,7 +252,7 @@
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('username');
-            window.location.href = '/';
+            window.location.href = '/login';
         }
         
         document.getElementById('send-button').addEventListener('click', sendMessage);
@@ -222,6 +263,8 @@
         if (document.querySelector('.session-item')) {
             document.querySelector('.session-item').click();
         }
+        
+        loadKbList();
     </script>
 </body>
 </html>

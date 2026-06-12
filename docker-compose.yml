@@ -1,70 +1,29 @@
-version: '3.8'
-
 services:
-  # PostgreSQL 数据库 (支持 pgvector 向量插件)
   postgres:
-    image: pgvector/pgvector:pg16                # 使用官方 pgvector 镜像[reference:1]
-    container_name: postgres
-    restart: unless-stopped
+    # 1. 使用预装了pgvector的官方镜像
+    image: docker.m.daocloud.io/pgvector/pgvector:pg16
+    container_name: postgres-pgvector
+    restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret123}
-      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+      POSTGRES_USER: admin        # 替换为你的数据库用户名
+      POSTGRES_PASSWORD: secret123    # 替换为你的数据库密码
+      POSTGRES_DB: appdb          # 替换为你的数据库名
     ports:
-      - "5432:5432"
+      - "5432:5432"                       # 将宿主机5432端口映射到容器5432端口
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      # 可选：创建初始化脚本，自动启用 vector 扩展并建表[reference:2][reference:3]
-      - ./postgres/init:/docker-entrypoint-initdb.d
-    networks:
-      - service-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-appdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - /home/cgl/v7ai-data/postgres:/var/lib/postgresql/data  # 数据库持久化目录(WSL)
 
-  # MySQL 8.0 数据库
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    restart: unless-stopped
+  minio:
+    # 官方版本号：RELEASE.2024-11-07T00-52-20Z (这是2024年一个较新的稳定版)
+    image: docker.m.daocloud.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
+    container_name: minio
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-appdb}
-      MYSQL_USER: ${MYSQL_USER:-appuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppass}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
     ports:
-      - "3306:3306"
+      - "9000:9000"
+      - "9001:9001"
     volumes:
-      - ./data/mysql:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d
-    networks:
-      - service-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Nginx 反向代理
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/html:/usr/share/nginx/html
-      - ./nginx/logs:/var/log/nginx
-    networks:
-      - service-net
-    depends_on:
-      - postgres
-      - mysql
-
-networks:
-  service-net:
-    driver: bridge
+      - /home/cgl/v7ai-data/minio:/data
+    command: server /data --console-address ":9001"

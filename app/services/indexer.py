@@ -86,10 +86,11 @@ class Indexer:
         """Parse file bytes into plain text."""
         ext = file_type
 
+        text = ""
         if ext in ("txt", "md", "csv"):
-            return content.decode("utf-8", errors="replace")
+            text = content.decode("utf-8", errors="replace")
 
-        if ext == "pdf":
+        elif ext == "pdf":
             from pypdf import PdfReader
             reader = PdfReader(io.BytesIO(content))
             pages = []
@@ -97,9 +98,9 @@ class Indexer:
                 t = page.extract_text()
                 if t:
                     pages.append(t)
-            return "\n\n".join(pages)
+            text = "\n\n".join(pages)
 
-        if ext == "xlsx":
+        elif ext == "xlsx":
             from openpyxl import load_workbook
             wb = load_workbook(io.BytesIO(content), read_only=True)
             rows = []
@@ -111,17 +112,25 @@ class Indexer:
                     if row_str.strip():
                         rows.append(row_str)
             wb.close()
-            return "\n".join(rows)
+            text = "\n".join(rows)
 
-        if ext == "docx":
+        elif ext == "docx":
             try:
                 from docx import Document
                 doc = Document(io.BytesIO(content))
-                return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
             except ImportError:
-                return f"[无法解析 DOCX 文件: 缺少 python-docx 依赖]"
+                text = "[无法解析 DOCX 文件: 缺少 python-docx 依赖]"
+            except Exception as e:
+                logger.warning(f"DOCX parse failed for {filename}: {e}, trying as text")
+                text = content.decode("utf-8", errors="replace")
 
-        return content.decode("utf-8", errors="replace")
+        else:
+            text = content.decode("utf-8", errors="replace")
+
+        # Strip NUL and non-printable control chars that break PostgreSQL
+        text = text.replace("\x00", "").replace("\r", "\n")
+        return text
 
     def _split_text(self, text: str, file_type: str) -> List[dict]:
         """Split text into chunks by file type."""
@@ -152,24 +161,36 @@ class Indexer:
                 chunks.append({"content": "\n".join(group), "metadata": {}})
         return chunks
 
-    def search_chunks(self, query: str, top_k: int = 5) -> List[dict]:
-        """Search document chunks by semantic similarity."""
+    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None) -> List[dict]:
+        """Search document chunks by semantic similarity, optionally scoped to a KB."""
         from sqlalchemy import text
 
         query_embedding = embed_texts([query])[0]
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
-        sql = text("""
-            SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
-                   kf.filename, kf.file_type,
-                   1 - (dc.embedding <=> :embedding) AS similarity
-            FROM document_chunks dc
-            JOIN knowledge_files kf ON dc.file_id = kf.id
-            ORDER BY dc.embedding <=> :embedding
-            LIMIT :limit
-        """)
-
-        result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k})
+        if kb_id:
+            sql = text("""
+                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                       kf.filename, kf.file_type,
+                       1 - (dc.embedding <=> :embedding) AS similarity
+                FROM document_chunks dc
+                JOIN knowledge_files kf ON dc.file_id = kf.id
+                WHERE kf.kb_id = :kb_id
+                ORDER BY dc.embedding <=> :embedding
+                LIMIT :limit
+            """)
+            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "kb_id": kb_id})
+        else:
+            sql = text("""
+                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                       kf.filename, kf.file_type,
+                       1 - (dc.embedding <=> :embedding) AS similarity
+                FROM document_chunks dc
+                JOIN knowledge_files kf ON dc.file_id = kf.id
+                ORDER BY dc.embedding <=> :embedding
+                LIMIT :limit
+            """)
+            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k})
         rows = []
         for r in result:
             rows.append({
