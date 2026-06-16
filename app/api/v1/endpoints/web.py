@@ -1036,7 +1036,7 @@ loadStats();loadFiles();
 
 @router.get("/observability", response_class=HTMLResponse)
 async def observability_page(request: Request):
-    """Observability traces viewer."""
+    """Observability traces viewer + rating system."""
     return HTMLResponse(content=r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1048,7 +1048,7 @@ async def observability_page(request: Request):
         .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
         .header h1{font-size:20px}
         .header nav a{color:#fff;text-decoration:none;margin-left:20px;padding:6px 14px;border-radius:4px;background:rgba(255,255,255,.2)}
-        .container{max-width:1200px;margin:24px auto;padding:0 16px}
+        .container{max-width:1300px;margin:24px auto;padding:0 16px}
         .card{background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
         .card h2{font-size:18px;margin-bottom:16px}
         .stats-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
@@ -1064,14 +1064,44 @@ async def observability_page(request: Request):
         .badge-error{background:#fff2f0;color:#ff4d4f}
         .node-classify{color:#722ed1}
         .node-retrieve{color:#1890ff}
-        .node-generate{color:#52c41a}
+        .node-generate_with_docs,.node-generate_no_docs,.node-generate{color:#52c41a}
         .node-fallback{color:#fa8c16}
         .toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
         .btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:13px;background:#667eea;color:#fff}
         .btn:hover{opacity:.85}
+        .btn-sm{padding:3px 10px;font-size:11px;border:none;border-radius:3px;cursor:pointer}
+        .btn-rate{background:#faad14;color:#fff}
+        .btn-rate:hover{opacity:.85}
+        .btn-star{background:none;border:none;cursor:pointer;font-size:16px;color:#faad14}
+        .btn-star.empty{color:#ddd}
         select{padding:6px 10px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px}
         .trace-id{font-family:monospace;font-size:12px;color:#999}
-        .preview{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+        .preview{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+        /* Modal */
+        .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:1000;justify-content:center;align-items:center}
+        .modal-overlay.show{display:flex}
+        .modal{background:#fff;border-radius:8px;padding:24px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto}
+        .modal h3{margin-bottom:16px;font-size:16px}
+        .dim-group{margin-bottom:14px}
+        .dim-group label{display:block;font-size:13px;color:#666;margin-bottom:4px}
+        .dim-group .stars{display:flex;gap:4px}
+        .form-row{display:flex;gap:8px;margin-top:16px}
+        .form-row input,.form-row textarea{flex:1;padding:8px;border:1px solid #d9d9d9;border-radius:4px;font-size:13px}
+        .form-row textarea{height:60px;resize:vertical}
+        .btn-cancel{background:#f5f5f5;color:#666}
+        .rating-score{display:inline-flex;align-items:center;gap:2px;font-size:12px}
+        .rating-score .star{color:#faad14}
+        .tabs{display:flex;gap:12px;margin-bottom:16px;border-bottom:2px solid #f0f0f0;padding-bottom:8px}
+        .tab{cursor:pointer;padding:6px 16px;border-radius:4px 4px 0 0;font-size:14px;color:#666}
+        .tab.active{color:#667eea;font-weight:600;border-bottom:2px solid #667eea;margin-bottom:-10px}
+        .section{display:none}
+        .section.active{display:block}
+        .dim-bars{margin-top:12px}
+        .dim-bar-row{display:flex;align-items:center;margin-bottom:6px;gap:8px}
+        .dim-bar-row .dim-label{width:70px;font-size:12px;text-align:right;color:#666}
+        .dim-bar-row .dim-bar{flex:1;height:14px;background:#f0f0f0;border-radius:7px;overflow:hidden}
+        .dim-bar-row .dim-bar-fill{height:100%;border-radius:7px;background:linear-gradient(90deg,#faad14,#f5222d)}
+        .dim-bar-row .dim-val{width:35px;font-size:12px;color:#333}
     </style>
 </head>
 <body>
@@ -1089,25 +1119,102 @@ async def observability_page(request: Request):
         <div class="stat-item"><div class="num" id="statSuccess">0</div><div class="label">成功</div></div>
         <div class="stat-item"><div class="num" id="statError">0</div><div class="label">失败</div></div>
         <div class="stat-item"><div class="num" id="statAvgLatency">0ms</div><div class="label">平均延迟</div></div>
+        <div class="stat-item"><div class="num" id="statAvgRating">-</div><div class="label">平均评分</div></div>
+        <div class="stat-item"><div class="num" id="statRatingCount">0</div><div class="label">评分次数</div></div>
     </div>
-    <div class="card">
-        <div class="toolbar">
-            <h2 style="flex:1;margin:0">📋 AI 调用链路追踪</h2>
-            <select id="filterNode" onchange="loadTraces()">
-                <option value="">全部节点</option>
-                <option value="classify">classify</option>
-                <option value="retrieve">retrieve</option>
-                <option value="generate_with_docs">generate_with_docs</option>
-                <option value="generate_no_docs">generate_no_docs</option>
-                <option value="fallback">fallback</option>
-            </select>
-            <button class="btn" onclick="loadTraces()">🔄 刷新</button>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('traces')">🔍 调用追踪</div>
+        <div class="tab" onclick="switchTab('ratings')">⭐ 评分管理</div>
+    </div>
+
+    <!-- Tab: Traces -->
+    <div class="section active" id="sectionTraces">
+        <div class="card">
+            <div class="toolbar">
+                <h2 style="flex:1;margin:0">📋 AI 调用链路追踪</h2>
+                <select id="filterNode" onchange="loadTraces()">
+                    <option value="">全部节点</option>
+                    <option value="classify">classify</option>
+                    <option value="retrieve">retrieve</option>
+                    <option value="generate_with_docs">generate_with_docs</option>
+                    <option value="generate_no_docs">generate_no_docs</option>
+                    <option value="fallback">fallback</option>
+                </select>
+                <button class="btn" onclick="loadTraces()">🔄 刷新</button>
+            </div>
+            <div id="traceList">加载中...</div>
         </div>
-        <div id="traceList">加载中...</div>
+    </div>
+
+    <!-- Tab: Ratings -->
+    <div class="section" id="sectionRatings">
+        <div class="card">
+            <div class="toolbar">
+                <h2 style="flex:1;margin:0">⭐ 评分统计</h2>
+                <select id="ratingFilterType" onchange="loadRatingStats()">
+                    <option value="">全部类型</option>
+                    <option value="trace">Trace(对话轮次)</option>
+                    <option value="observation">Observation(观测步骤)</option>
+                </select>
+                <select id="ratingFilterNode" onchange="loadRatingStats()">
+                    <option value="">全部节点</option>
+                    <option value="classify">classify</option>
+                    <option value="retrieve">retrieve</option>
+                    <option value="generate_with_docs">generate_with_docs</option>
+                    <option value="generate_no_docs">generate_no_docs</option>
+                    <option value="fallback">fallback</option>
+                </select>
+                <select id="ratingFilterRater" onchange="loadRatingStats()">
+                    <option value="">全部来源</option>
+                    <option value="ai">AI 裁判</option>
+                    <option value="human">人工评分</option>
+                </select>
+                <button class="btn" onclick="loadRatingStats();loadRatingList()">🔄 刷新</button>
+            </div>
+            <div id="ratingStats">加载中...</div>
+            <div id="dimBars" class="dim-bars"></div>
+        </div>
+        <div class="card">
+            <h2>📝 评分记录</h2>
+            <div id="ratingList">请点击刷新加载</div>
+        </div>
     </div>
 </div>
+
+<!-- Rating Modal -->
+<div class="modal-overlay" id="ratingModal">
+    <div class="modal">
+        <h3>⭐ 质量评分</h3>
+        <div id="ratingTargetInfo" style="font-size:12px;color:#999;margin-bottom:12px"></div>
+        <div id="ratingDims"></div>
+        <div class="form-row">
+            <input type="text" id="ratingScorer" placeholder="评分人(可选)">
+        </div>
+        <div class="form-row">
+            <textarea id="ratingComment" placeholder="评语/反馈(可选)"></textarea>
+        </div>
+        <div class="form-row">
+            <button class="btn" onclick="submitRating()">✅ 提交评分</button>
+            <button class="btn btn-cancel" onclick="closeRatingModal()">取消</button>
+        </div>
+    </div>
+</div>
+
 <script>
-const API="/api/v1/observability";
+var API="/api/v1/observability";
+var currentRatingTarget=null;
+var currentRatingDims=[];
+
+// ── Tab switching ────────────────────────────────────────────────
+function switchTab(tab){
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+    document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active')});
+    if(tab==='traces'){document.querySelector('.tab').classList.add('active');document.getElementById('sectionTraces').classList.add('active');loadTraces();loadStats()}
+    else{document.querySelectorAll('.tab')[1].classList.add('active');document.getElementById('sectionRatings').classList.add('active');loadRatingStats();loadRatingList()}
+}
+
+// ── Trace stats ──────────────────────────────────────────────────
 async function loadStats(){
     try{
         var r=await fetch(API+"/traces/stats");
@@ -1118,6 +1225,7 @@ async function loadStats(){
         document.getElementById("statAvgLatency").textContent=d.avg_latency_ms+"ms";
     }catch(e){console.error(e)}
 }
+
 async function loadTraces(){
     var el=document.getElementById("traceList");
     el.innerHTML="加载中...";
@@ -1128,20 +1236,205 @@ async function loadTraces(){
         var r=await fetch(url);
         var d=await r.json();
         if(!d.traces||d.traces.length===0){el.innerHTML='<div style="text-align:center;padding:40px;color:#999">暂无追踪数据，尝试发送一条消息后再查看</div>';return}
-        var h='<table><thead><tr><th>时间</th><th>Trace ID</th><th>节点</th><th>输入</th><th>输出</th><th>延迟</th><th>状态</th></tr></thead><tbody>';
+        var h='<table><thead><tr><th>时间</th><th>Trace ID</th><th>节点</th><th>输入</th><th>输出</th><th>延迟</th><th>状态</th><th>AI评分</th><th>人工</th><th>操作</th></tr></thead><tbody>';
         d.traces.forEach(function(t){
             var time=t.created_at?t.created_at.slice(11,19):"";
             var nodeClass="node-"+t.node_name.replace("_with_docs","").replace("_no_docs","");
             var statusClass=t.status==="success"?"badge-success":"badge-error";
             var statusText=t.status==="success"?"成功":"失败";
             var latency=t.latency_ms+"ms";
-            h+='<tr><td>'+time+'</td><td><span class="trace-id">'+t.trace_id+'</span></td><td class="'+nodeClass+'">'+t.node_name+'</td><td class="preview" title="'+he(t.input_summary||"")+'">'+he((t.input_summary||"").slice(0,40))+'</td><td class="preview" title="'+he(t.output_summary||"")+'">'+he((t.output_summary||"").slice(0,40))+'</td><td>'+latency+'</td><td><span class="badge '+statusClass+'">'+statusText+'</span>'+(t.error_msg?'<br><small style="color:#ff4d4f">'+he(t.error_msg.slice(0,30))+'</small>':'')+'</td></tr>';
+            h+='<tr><td>'+time+'</td><td><span class="trace-id">'+t.trace_id+'</span></td><td class="'+nodeClass+'">'+t.node_name+'</td><td class="preview" title="'+he(t.input_summary||"")+'">'+he((t.input_summary||"").slice(0,25))+'</td><td class="preview" title="'+he(t.output_summary||"")+'">'+he((t.output_summary||"").slice(0,25))+'</td><td>'+latency+'</td><td><span class="badge '+statusClass+'">'+statusText+'</span>'+(t.error_msg?'<br><small style="color:#ff4d4f">'+he(t.error_msg.slice(0,20))+'</small>':'')+'</td><td id="score-ai-'+t.trace_id+'">-</td><td id="score-human-'+t.trace_id+'">-</td><td><button class="btn-sm btn-rate" onclick="openTraceRating(\''+t.trace_id+'\',\''+t.session_id+'\')">⭐ 评分</button></td></tr>';
         });
         h+='</tbody></table>';
         el.innerHTML=h;
+        loadTraceRatings(d.traces);
     }catch(e){el.innerHTML='<div style="text-align:center;padding:40px;color:#ff4d4f">加载失败: '+e.message+'</div>'}
 }
+
+async function loadTraceRatings(traces){
+    try{
+        var r=await fetch(API+"/ratings?target_type=trace&limit=200");
+        var d=await r.json();
+        var aiScores={}, humanScores={};
+        (d.ratings||[]).forEach(function(rt){
+            var target=rt.target_id;
+            if(rt.rater_type==="ai"){aiScores[target]=rt.overall_score}
+            else{humanScores[target]=rt.overall_score}
+        });
+        traces.forEach(function(t){
+            var aiEl=document.getElementById("score-ai-"+t.trace_id);
+            var huEl=document.getElementById("score-human-"+t.trace_id);
+            if(aiEl&&aiScores[t.trace_id]!==undefined){
+                aiEl.innerHTML='<span style="font-size:11px;color:#8c6cef">🤖'+aiScores[t.trace_id]+'</span>';
+            }
+            if(huEl&&humanScores[t.trace_id]!==undefined){
+                huEl.innerHTML='<span style="font-size:11px;color:#faad14">👤'+humanScores[t.trace_id]+'</span>';
+            }
+        });
+    }catch(e){}
+}
+
+// ── Rating modal ─────────────────────────────────────────────────
+function openTraceRating(traceId,sessionId){
+    currentRatingTarget={type:"trace",id:traceId,session_id:sessionId,node_name:""};
+    document.getElementById("ratingTargetInfo").innerHTML='<b>类型:</b> 对话轮次 (Trace) | <b>ID:</b> '+traceId;
+    loadRatingDimensions("trace","");
+    document.getElementById("ratingModal").classList.add("show");
+}
+
+async function loadRatingDimensions(targetType,nodeName){
+    var url=API+"/ratings/dimensions?target_type="+targetType;
+    if(nodeName)url+="&node_name="+nodeName;
+    try{
+        var r=await fetch(url);
+        var d=await r.json();
+        currentRatingDims=d.dimensions||[];
+        renderDimStars(currentRatingDims);
+    }catch(e){console.error(e)}
+}
+
+function renderDimStars(dims){
+    var h='';
+    dims.forEach(function(dim,i){
+        h+='<div class="dim-group"><label>'+dim.label+' ('+dim.key+')</label><div class="stars">';
+        for(var s=1;s<=dim.max;s++){
+            h+='<button class="btn-star empty" id="star-'+i+'-'+s+'" onclick="setStar('+i+','+s+','+dim.max+')">★</button>';
+        }
+        h+='</div></div>';
+    });
+    document.getElementById("ratingDims").innerHTML=h||'<div style="color:#999;padding:12px">该类型暂无评分维度定义</div>';
+}
+
+function setStar(dimIdx,val,max){
+    for(var s=1;s<=max;s++){
+        var el=document.getElementById("star-"+dimIdx+"-"+s);
+        if(el)el.classList.toggle("empty",s>val);
+    }
+    currentRatingDims[dimIdx].value=val;
+}
+
+function closeRatingModal(){
+    document.getElementById("ratingModal").classList.remove("show");
+    currentRatingTarget=null;
+    currentRatingDims=[];
+}
+
+async function submitRating(){
+    if(!currentRatingTarget)return;
+    var dims={};
+    currentRatingDims.forEach(function(d){
+        if(d.value)dims[d.key]=d.value;
+    });
+    if(Object.keys(dims).length===0){alert("请至少对一个维度打分");return}
+
+    var scorer=document.getElementById("ratingScorer").value||"anonymous";
+    var comment=document.getElementById("ratingComment").value;
+    try{
+        var r=await fetch(API+"/ratings",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                target_type:currentRatingTarget.type,
+                target_id:currentRatingTarget.id,
+                session_id:currentRatingTarget.session_id,
+                node_name:currentRatingTarget.node_name||"",
+                scorer:scorer,
+                rater_type:"human",
+                dimension_scores:dims,
+                comment:comment
+            })
+        });
+        var d=await r.json();
+        if(d.id){alert("评分已保存 (综合分: "+d.overall_score+")");closeRatingModal();loadTraces()}
+    }catch(e){alert("提交失败: "+e.message)}
+}
+
+// ── Rating stats ─────────────────────────────────────────────────
+async function loadRatingStats(){
+    var el=document.getElementById("ratingStats");
+    el.innerHTML="加载中...";
+    var type=document.getElementById("ratingFilterType").value;
+    var node=document.getElementById("ratingFilterNode").value;
+    var rater=document.getElementById("ratingFilterRater").value;
+    var url=API+"/ratings/stats?";
+    if(type)url+="target_type="+type+"&";
+    if(node)url+="node_name="+node+"&";
+    if(rater)url+="rater_type="+rater+"&";
+    try{
+        var r=await fetch(url);
+        var d=await r.json();
+        if(!d.total){el.innerHTML='<div style="text-align:center;padding:20px;color:#999">暂无评分数据</div>';document.getElementById("statAvgRating").textContent="-";document.getElementById("statRatingCount").textContent="0";return}
+
+        // Also load comparison
+        var cmpUrl=API+"/ratings/compare?";
+        if(node)cmpUrl+="node_name="+node;
+        var cmpR=await fetch(cmpUrl);
+        var cmp=await cmpR.json();
+
+        document.getElementById("statAvgRating").textContent=d.avg_overall||"-";
+        document.getElementById("statRatingCount").textContent=d.total||0;
+
+        var h='<div style="display:flex;gap:16px"><div style="flex:1"><b>总评分数:</b> '+d.total+'</div><div style="flex:1"><b>平均分:</b> '+d.avg_overall+'/5</div></div>';
+
+        // AI vs Human comparison
+        h+='<div style="margin-top:12px;display:flex;gap:12px">';
+        h+='<div style="flex:1;padding:10px;background:#f6f3ff;border-radius:6px"><b>🤖 AI 裁判</b><br><span style="font-size:13px">'+((cmp.ai||{}).avg_overall||"-")+'/5</span> <span style="font-size:11px;color:#999">('+((cmp.ai||{}).total||0)+'次)</span></div>';
+        h+='<div style="flex:1;padding:10px;background:#fffbe6;border-radius:6px"><b>👤 人工评分</b><br><span style="font-size:13px">'+((cmp.human||{}).avg_overall||"-")+'/5</span> <span style="font-size:11px;color:#999">('+((cmp.human||{}).total||0)+'次)</span></div>';
+        h+='</div>';
+
+        // Per-node breakdown
+        if(d.by_node&&Object.keys(d.by_node).length>0){
+            h+='<div style="margin-top:12px"><b>按节点:</b> ';
+            var nodes=[];
+            for(var n in d.by_node){nodes.push(n+': '+d.by_node[n].avg_overall+' ('+d.by_node[n].count+'次)')}
+            h+=nodes.join(' | ')+'</div>';
+        }
+        el.innerHTML=h;
+
+        // Dimension bars
+        var barHtml='';
+        if(d.by_dimension&&Object.keys(d.by_dimension).length>0){
+            for(var k in d.by_dimension){
+                var v=d.by_dimension[k];
+                var pct=(v.avg/5*100);
+                barHtml+='<div class="dim-bar-row"><span class="dim-label">'+v.label+'</span><div class="dim-bar"><div class="dim-bar-fill" style="width:'+pct+'%"></div></div><span class="dim-val">'+v.avg+'</span></div>';
+            }
+        }
+        document.getElementById("dimBars").innerHTML=barHtml;
+    }catch(e){el.innerHTML='<div style="color:#ff4d4f">加载失败: '+e.message+'</div>'}
+}
+
+async function loadRatingList(){
+    var el=document.getElementById("ratingList");
+    el.innerHTML="加载中...";
+    try{
+        var r=await fetch(API+"/ratings?limit=30");
+        var d=await r.json();
+        if(!d.ratings||d.ratings.length===0){el.innerHTML='<div style="text-align:center;padding:20px;color:#999">暂无评分记录</div>';return}
+        var h='<table><thead><tr><th>时间</th><th>来源</th><th>类型</th><th>目标ID</th><th>节点</th><th>评分人/模型</th><th>维度评分</th><th>综合</th><th>评语</th></tr></thead><tbody>';
+        d.ratings.forEach(function(rt){
+            var time=rt.created_at?rt.created_at.slice(0,16):"";
+            var srcTag=rt.rater_type==="ai"?'<span style="color:#8c6cef;font-size:11px">🤖 AI</span>':'<span style="color:#faad14;font-size:11px">👤 人工</span>';
+            var scorerLabel=rt.rater_type==="ai"?(rt.judge_model||rt.scorer):rt.scorer;
+            var dimsHtml='';
+            var ds=rt.dimension_scores||{};
+            var rs=rt.dimension_reasons||{};
+            for(var k in ds){
+                var reason=rs[k]?' title="'+he(rs[k])+'"':'';
+                dimsHtml+='<span style="margin-right:4px;font-size:11px"'+reason+'>'+k+':'+ds[k]+'</span>'
+            }
+            var stars='';
+            for(var i=0;i<Math.round(rt.overall_score);i++)stars+='<span class="star">★</span>';
+            h+='<tr><td>'+time+'</td><td>'+srcTag+'</td><td>'+rt.target_type+'</td><td style="font-family:monospace;font-size:11px">'+rt.target_id.slice(0,12)+'</td><td>'+rt.node_name+'</td><td style="font-size:11px">'+he(scorerLabel)+'</td><td>'+dimsHtml+'</td><td><span class="rating-score">'+stars+' '+rt.overall_score+'</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+he(rt.comment||"")+'</td></tr>';
+        });
+        h+='</tbody></table>';
+        el.innerHTML=h;
+    }catch(e){el.innerHTML='<div style="color:#ff4d4f">加载失败: '+e.message+'</div>'}
+}
+
 function he(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// Init
 loadStats();loadTraces();
 </script>
 </body>

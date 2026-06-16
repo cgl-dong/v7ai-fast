@@ -1,4 +1,5 @@
 """LangGraph RAG Agent — knowledge-base aware AI assistant with observability tracing."""
+import asyncio
 import json
 import logging
 from typing import TypedDict, List, Optional, Literal, Annotated
@@ -10,6 +11,7 @@ from app.services.deepseek import AIService
 from app.services.indexer import Indexer
 from app.services.model_config import ModelConfigService
 from app.services.observability import Tracer
+from app.services.judge import evaluate_agent_response
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,8 @@ class RAGAgent:
         self.tracer = Tracer(db)
         self.session_id = session_id
         self.model_name = self.ai.model
+        self._last_trace_id = ""  # For AI Judge to reference
+        self._last_node_name = ""
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -140,8 +144,10 @@ class RAGAgent:
             prompt = f"问题: {question}\n\n用中文简洁回答。"
 
         node_name = "generate_with_docs" if has_context else "generate_no_docs"
+        self._last_node_name = node_name
         with self.tracer.trace(node_name, self.session_id, "agent_node", self.model_name,
                                {"has_context": has_context}) as ctx:
+            self._last_trace_id = ctx.trace_id  # Capture for judge
             ctx.input = question[:200]
             try:
                 answer = await self.ai.call_model(prompt)
@@ -164,10 +170,14 @@ class RAGAgent:
         if not use_kb:
             with self.tracer.trace("generate_direct", self.session_id, "agent_node", self.model_name,
                                    {"use_kb": False}) as ctx:
+                self._last_trace_id = ctx.trace_id
+                self._last_node_name = "generate_direct"
                 ctx.input = message[:200]
                 try:
                     answer = await self.ai.call_model(message)
                     ctx.output = answer[:500]
+                    # Fire-and-forget AI judge evaluation
+                    _fire_judge(self._last_trace_id, self.session_id, message, answer, "", self._last_node_name)
                     return answer
                 except Exception as e:
                     logger.error(f"Direct answer error: {e}")
@@ -185,15 +195,37 @@ class RAGAgent:
         }
         try:
             result = await self.graph.ainvoke(state)
-            return result.get("answer", "未能生成回答")
+            answer = result.get("answer", "未能生成回答")
+            context = result.get("context", "")
+            # Fire-and-forget AI judge evaluation
+            _fire_judge(self._last_trace_id, self.session_id, message, answer, context, self._last_node_name)
+            return answer
         except Exception as e:
             logger.error(f"Agent error: {e}")
             with self.tracer.trace("fallback", self.session_id, "agent_node", self.model_name) as ctx:
+                self._last_trace_id = ctx.trace_id
+                self._last_node_name = "fallback"
                 ctx.input = message[:200]
                 try:
                     answer = await self.ai.call_model(message)
                     ctx.output = answer[:500]
+                    _fire_judge(self._last_trace_id, self.session_id, message, answer, "", self._last_node_name)
                     return answer
                 except Exception as fe:
                     ctx.metadata["fallback_error"] = str(fe)
                     return f"处理失败: {e}"
+
+
+def _fire_judge(trace_id: str, session_id: str, question: str, answer: str, context: str, node_name: str):
+    """Fire-and-forget AI judge evaluation in background. Never blocks the main flow."""
+    if not trace_id:
+        return
+    try:
+        loop = asyncio.get_event_loop()
+        loop.create_task(evaluate_agent_response(
+            question=question, answer=answer,
+            trace_id=trace_id, session_id=session_id,
+            context=context, node_name=node_name,
+        ))
+    except Exception as e:
+        logger.debug(f"Failed to launch judge: {e}")

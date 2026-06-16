@@ -1,7 +1,7 @@
 """Database engine, session factory, and ORM models.
 Uses PostgreSQL — configure via DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME in .env.
 """
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -202,6 +202,25 @@ class AITrace(Base):
     token_count = Column(Integer, default=0, comment="Token消耗估算")
     error_msg = Column(Text, comment="错误信息")
     metadata_json = Column(Text, comment="元数据JSON")
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class TraceRating(Base):
+    """评分系统 - Trace/Observation 多维度质量评估。支持 AI 裁判 + 人工复核。"""
+    __tablename__ = "trace_ratings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(String(20), nullable=False, index=True, comment="评分目标: trace(对话轮次) / observation(观测步骤)")
+    target_id = Column(String(100), nullable=False, index=True, comment="目标ID: trace_id 或 observation序号")
+    session_id = Column(String(100), index=True, comment="关联会话ID")
+    node_name = Column(String(50), index=True, comment="节点名称(observation级别)")
+    rater_type = Column(String(20), default="human", index=True, comment="评价来源: ai(LLM裁判) / human(人工)")
+    scorer = Column(String(100), comment="评分人: ai_judge_{model} 或 用户名")
+    judge_model = Column(String(100), comment="裁判模型名称(ai评价时)")
+    dimension_scores = Column(Text, nullable=False, comment="多维度评分JSON: {维度:分数}")
+    dimension_reasons = Column(Text, comment="各维度评价理由JSON: {维度:理由}")
+    overall_score = Column(Float, default=0.0, comment="综合评分(加权平均)")
+    comment = Column(Text, comment="评语/反馈")
     created_at = Column(DateTime, default=datetime.now)
 
 

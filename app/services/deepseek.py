@@ -9,10 +9,11 @@ from app.core.settings import settings
 class AIService:
     """Service for interacting with AI models. Reads config from DB or falls back to .env."""
     
-    def __init__(self, api_key: str = None, model: str = None, api_url: str = None):
+    def __init__(self, api_key: str = None, model: str = None, api_url: str = None, temperature: float = 0.7):
         self.api_key = api_key or settings.deepseek_api_key
         self.model = model or settings.deepseek_model or "deepseek-chat"
         self.api_url = self._normalize_url(api_url) if api_url else "https://api.deepseek.com/v1/chat/completions"
+        self.temperature = temperature
         self.timeout = httpx.Timeout(60.0, connect=10.0)
     
     @staticmethod
@@ -37,7 +38,7 @@ class AIService:
         
         data = {
             "model": self.model,
-            "temperature": 0.7,
+            "temperature": self.temperature,
             "messages": [{"role": "user", "content": question}]
         }
         

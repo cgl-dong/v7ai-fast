@@ -1,4 +1,12 @@
-"""Document indexing service — splits, embeds, and stores in pgvector."""
+"""Document indexing service — splits, embeds, and stores in pgvector.
+
+Powered by LlamaIndex text splitters with multi-strategy support:
+  - sentence  — SentenceSplitter, 按句子边界智能切分 (PDF/DOCX)
+  - paragraph — 按段落切分, 保留篇章结构 (MD/TXT)
+  - token     — Token 级切分, 对齐模型上下文窗口
+  - fixed     — 固定长度切分 (CSV 等)
+  - excel     — Excel 行分组切分
+"""
 import io
 import json
 import logging
@@ -9,12 +17,9 @@ from app.core.database import KnowledgeFile, DocumentChunk
 from app.core.settings import settings
 from app.services.knowledge import KnowledgeService
 from app.services.embedding import embed_texts
+from app.services.chunking import split_text, CHUNK_CONFIG
 
 logger = logging.getLogger(__name__)
-
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
-EXCEL_ROW_CHUNK = 5
 
 
 class Indexer:
@@ -24,8 +29,11 @@ class Indexer:
         self.db = db
         self.knowledge_svc = KnowledgeService(db)
 
-    def index_file(self, file_id: int) -> dict:
-        """Index a single file: load → split → embed → store."""
+    def index_file(self, file_id: int, strategy: str = None, chunk_size: int = None, chunk_overlap: int = None) -> dict:
+        """Index a single file: load → split → embed → store.
+
+        Optionally override chunking strategy/size/overlap per call.
+        """
         record = self.db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
         if not record:
             return {"error": "文件不存在"}
@@ -39,8 +47,25 @@ class Indexer:
             content_bytes, _, _ = self.knowledge_svc.get_file_content(file_id)
             text = self._parse_content(content_bytes, record.filename, record.file_type)
 
-            # 2. Split into chunks
-            chunks = self._split_text(text, record.file_type)
+            # 1.5 Validate content quality — reject binary garbage
+            err = self._validate_content(text, record.filename)
+            if err:
+                record.status = "error"
+                record.error_msg = err
+                self.db.commit()
+                return {"error": err}
+
+            # 2. Get chunk config for this file type (with optional overrides)
+            from app.services.chunking import ChunkConfig
+            cfg = CHUNK_CONFIG.get(record.file_type, CHUNK_CONFIG["default"])
+            effective_config = ChunkConfig(
+                strategy=strategy or cfg.strategy,
+                chunk_size=chunk_size or cfg.chunk_size,
+                chunk_overlap=chunk_overlap or cfg.chunk_overlap,
+            )
+
+            # 3. Split into chunks using LlamaIndex strategy
+            chunks = split_text(text, record.file_type, config=effective_config)
 
             if not chunks:
                 record.status = "error"
@@ -48,32 +73,38 @@ class Indexer:
                 self.db.commit()
                 return {"error": "文档内容为空"}
 
-            # 3. Delete old chunks
+            # 4. Delete old chunks
             self.db.query(DocumentChunk).filter(DocumentChunk.file_id == file_id).delete()
 
-            # 4. Generate embeddings and store
+            # 5. Generate embeddings and store
             texts = [c["content"] for c in chunks]
-            logger.info(f"Generating embeddings for {len(texts)} chunks...")
+            logger.info(f"Generating embeddings for {len(texts)} chunks "
+                        f"(strategy={effective_config.strategy}, size={effective_config.chunk_size}, "
+                        f"overlap={effective_config.chunk_overlap})...")
             embeddings = embed_texts(texts)
 
             for i, chunk in enumerate(chunks):
+                metadata = chunk.get("metadata", {})
+                metadata["chunk_strategy"] = effective_config.strategy
+                metadata["chunk_size"] = effective_config.chunk_size
+                metadata["chunk_overlap"] = effective_config.chunk_overlap
                 dc = DocumentChunk(
                     file_id=file_id,
                     chunk_index=i,
                     content=chunk["content"],
                     embedding=embeddings[i],
-                    metadata_json=json.dumps(chunk.get("metadata", {}), ensure_ascii=False),
+                    metadata_json=json.dumps(metadata, ensure_ascii=False),
                 )
                 self.db.add(dc)
 
-            # 5. Update status
+            # 6. Update status
             record.status = "indexed"
             record.chunk_count = len(chunks)
             record.error_msg = None
             self.db.commit()
 
-            logger.info(f"Indexed file {file_id}: {len(chunks)} chunks")
-            return {"success": True, "chunks": len(chunks)}
+            logger.info(f"Indexed file {file_id}: {len(chunks)} chunks (strategy={effective_config.strategy})")
+            return {"success": True, "chunks": len(chunks), "strategy": effective_config.strategy}
 
         except Exception as e:
             logger.error(f"Failed to index file {file_id}: {e}")
@@ -120,7 +151,7 @@ class Indexer:
                 doc = Document(io.BytesIO(content))
                 text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
             except ImportError:
-                text = "[无法解析 DOCX 文件: 缺少 python-docx 依赖]"
+                text = ""
             except Exception as e:
                 logger.warning(f"DOCX parse failed for {filename}: {e}, trying as text")
                 text = content.decode("utf-8", errors="replace")
@@ -132,34 +163,29 @@ class Indexer:
         text = text.replace("\x00", "").replace("\r", "\n")
         return text
 
-    def _split_text(self, text: str, file_type: str) -> List[dict]:
-        """Split text into chunks by file type."""
-        if not text.strip():
-            return []
+    def _validate_content(self, text: str, filename: str) -> str | None:
+        """Validate that parsed content looks like readable text, not binary garbage.
 
-        if file_type == "xlsx":
-            return self._split_excel(text)
+        Returns error message string if content is invalid, None if OK.
+        """
+        if not text or not text.strip():
+            return "文档解析后内容为空"
 
-        # General text splitting
-        chunks = []
-        start = 0
-        while start < len(text):
-            end = min(start + CHUNK_SIZE, len(text))
-            chunk_text = text[start:end]
-            if chunk_text.strip():
-                chunks.append({"content": chunk_text, "metadata": {}})
-            start += CHUNK_SIZE - CHUNK_OVERLAP
-        return chunks
+        total = len(text)
+        # Count printable ratio: letters, digits, CJK, punctuation, whitespace
+        printable = sum(
+            1 for c in text
+            if c.isprintable() or c in "\n\t\r" or
+               ('\u4e00' <= c <= '\u9fff') or  # CJK
+               ('\u3000' <= c <= '\u303f') or  # CJK punctuation
+               ('\uff00' <= c <= '\uffef')      # Fullwidth forms
+        )
+        ratio = printable / total if total > 0 else 0
 
-    def _split_excel(self, text: str) -> List[dict]:
-        """Split Excel content row-by-row, grouping by 5 rows."""
-        lines = [l for l in text.split("\n") if l.strip()]
-        chunks = []
-        for i in range(0, len(lines), EXCEL_ROW_CHUNK - 1):
-            group = lines[i:i + EXCEL_ROW_CHUNK]
-            if group:
-                chunks.append({"content": "\n".join(group), "metadata": {}})
-        return chunks
+        if ratio < 0.5:
+            return f"文件内容可读率仅 {ratio:.1%}，可能是二进制文件或加密文件"
+
+        return None
 
     def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None) -> List[dict]:
         """Search document chunks by semantic similarity, optionally scoped to a KB."""

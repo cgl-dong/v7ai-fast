@@ -47,6 +47,23 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
                                      [来源: xxx文档] 标注引用
 ```
 
+### 评分系统
+
+评分系统是可观测性模块的质量评估组件，允许用户对 Trace（对话轮次）和 Observation（单个观测步骤）进行多维度打分。在可观测性面板中直接操作，通过评分数据的积累，团队可以量化评估智能体的输出质量，发现问题模式，并持续优化智能体配置。
+
+```
+对话轮次 (Trace)
+  └── Observation 1 (classify)  →  [准确性 ★★★★☆] [相关性 ★★★★★] [完整性 ★★★☆☆]
+  └── Observation 2 (retrieve)  →  [命中率 ★★★★★] [多样性 ★★★☆☆]
+  └── Observation 3 (generate)  →  [准确性 ★★★★☆] [流畅度 ★★★★★] [有用性 ★★★★☆]
+```
+
+- **多维度打分** — 针对不同步骤类型提供差异化评分维度（准确性、相关性、完整性、流畅度、有用性等）
+- **Trace 级别评分** — 按对话轮次整体评估，衡量单次问答的综合质量
+- **Observation 级别评分** — 按单个观测步骤（classify / retrieve / generate / fallback）精细化评分
+- **质量趋势分析** — 汇总历史评分数据，识别质量波动和退化模式
+- **反馈闭环** — 评分数据驱动智能体 Prompt / 模型 / 检索策略持续优化
+
 ## 功能清单
 
 | 模块 | 状态 | 功能 |
@@ -63,6 +80,8 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 | 📊 **管理面板** | ✅ 已完成 | Admin 页面：模型配置 + 会话 + Prompt |
 | 🧠 **记忆系统** | 📋 规划中 | 多轮对话上下文 + 用户偏好 + 长期记忆 |
 | 🔌 **MCP 模块** | 📋 规划中 | Model Context Protocol，工具调用 |
+| 📊 **可观测性追踪** | ✅ 已完成 | AI 调用链路追踪（节点耗时 / Token 估算 / 错误记录） |
+| ⭐ **评分系统** | ✅ 已完成 | Trace/Observation 多维度打分，质量量化评估 |
 | 📈 **日志监控** | 📋 规划中 | 调用统计 + 成本分析 + 告警 |
 
 ## 项目结构
@@ -77,8 +96,9 @@ v7ai-fast/
 │   │       │   ├── knowledge.py    # 知识库 API（上传/索引/检索）
 │   │       │   ├── model.py        # 模型配置 CRUD API
 │   │       │   ├── prompt.py       # Prompt 模板 CRUD API
-│   │       │   ├── web.py          # Web 页面 + Chat API + Admin
-│   │       │   └── woa.py          # WOA 事件回调
+│   │   │       ├── web.py          # Web 页面 + Chat API + Admin
+│   │       │   ├── woa.py          # WOA 事件回调
+│   │       │   └── observability.py # 可观测性 API（追踪 + 评分）
 │   │       └── __init__.py
 │   │   └── __init__.py
 │   ├── core/
@@ -96,6 +116,8 @@ v7ai-fast/
 │   │   ├── model_config.py         # 模型配置管理
 │   │   ├── prompt.py               # Prompt 模板管理
 │   │   ├── session.py              # 会话管理
+│   │   ├── observability.py        # 可观测性追踪服务
+│   │   ├── rating.py                # 评分服务（多维度质量评估）
 │   │   └── woa.py                  # WOA 消息发送
 │   └── templates/
 │       ├── admin.html              # 管理面板
@@ -120,6 +142,8 @@ v7ai-fast/
 | `document_chunks` | 文档分片向量 (pgvector) |
 | `prompt_templates` | Prompt 提示词模板 |
 | `system_settings` | 系统参数 |
+| `ai_traces` | AI 调用追踪（可观测性） |
+| `trace_ratings` | 多维度质量评分 |
 | `event_logs` | WOA 事件日志 |
 
 ## API 端点
@@ -130,9 +154,11 @@ v7ai-fast/
 | `/api/v1/model/*` | 模型配置 CRUD |
 | `/api/v1/knowledge/*` | 文件上传/下载/索引/检索 |
 | `/api/v1/prompt/*` | Prompt 模板 CRUD |
+| `/api/v1/observability/*` | 追踪记录查询 + 评分 |
 | `/callback/eventmsg` | WOA 事件回调 |
 | `/api/chat` | Web 聊天 |
 | `/admin` | 管理面板 |
+| `/observability` | 可观测性面板 |
 
 ## 技术栈
 
@@ -183,6 +209,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 18081 --reload
 | `http://localhost:18081/chat` | 聊天界面 |
 | `http://localhost:18081/knowledge` | 知识库管理 |
 | `http://localhost:18081/admin` | 管理面板 |
+| `http://localhost:18081/observability` | 可观测性面板 |
 | `http://localhost:18081/docs` | API 文档 |
 
 ## License
