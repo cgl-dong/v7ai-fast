@@ -45,6 +45,7 @@ class ChatSession(Base):
     chat_id = Column(String(100), unique=True, index=True)
     user_id = Column(String(100))
     user_name = Column(String(100))
+    title = Column(String(200), default="", comment="自定义会话标题，空则用预览")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

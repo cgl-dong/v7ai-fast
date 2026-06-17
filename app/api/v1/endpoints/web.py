@@ -636,13 +636,45 @@ async def get_sessions(
             .limit(1)\
             .all()
         preview = messages[0].content[:50] + ("..." if len(messages[0].content) > 50 else "") if messages else "新对话"
+        custom_title = getattr(s, 'title', '') or ''
         result.append({
             "chat_id": s.chat_id,
-            "preview": preview,
+            "preview": custom_title or preview,
+            "custom_title": custom_title,
             "time": s.created_at.strftime('%m-%d %H:%M')
         })
 
     return {"sessions": result}
+
+
+@router.put("/api/sessions/{chat_id}/title")
+async def rename_session(chat_id: str, request: Request, db: Session = Depends(get_db)):
+    """Rename a chat session title."""
+    data = await request.json()
+    title = (data.get("title", "") or "").strip()[:200]
+    session_service = SessionService(db)
+    session = session_service.get_by_chat_id(chat_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    session.title = title
+    db.commit()
+    logger.info(f"Session renamed: {chat_id[:12]}... -> '{title}'")
+    return {"message": "已更新", "title": title}
+
+
+@router.delete("/api/sessions/{chat_id}")
+async def delete_session(chat_id: str, db: Session = Depends(get_db)):
+    """Delete a chat session and its messages."""
+    session_service = SessionService(db)
+    session = session_service.get_by_chat_id(chat_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    # Delete messages first
+    db.query(ChatMessage).filter(ChatMessage.session_id == session.id).delete()
+    db.delete(session)
+    db.commit()
+    logger.info(f"Session deleted: {chat_id[:12]}...")
+    return {"message": "已删除"}
 
 
 @router.get("/api/get-messages")

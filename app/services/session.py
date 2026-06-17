@@ -15,6 +15,10 @@ class SessionService:
     
     def __init__(self, db: Session):
         self.db = db
+
+    def get_by_chat_id(self, chat_id: str) -> Optional[ChatSession]:
+        """Get a session by chat_id."""
+        return self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
     
     def get_or_create_session(self, chat_id: str, user_id: str = None) -> ChatSession:
         """Get or create a chat session."""

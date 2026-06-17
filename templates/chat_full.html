@@ -21,7 +21,14 @@
         .session-item { padding: 12px; border-radius: 8px; cursor: pointer; margin-bottom: 5px; transition: background 0.2s; }
         .session-item:hover { background: #4a5568; }
         .session-item.active { background: #667eea; }
-        .session-title { font-size: 14px; font-weight: 500; }
+        .session-title { font-size: 14px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .session-item { display: flex; align-items: center; gap: 4px; }
+        .session-item .rename-btn { display: none; background: none; border: none; color: #8899aa; cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 3px; flex-shrink: 0; }
+        .session-item:hover .rename-btn { display: inline; }
+        .session-item .rename-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .session-item .delete-btn { display: none; background: none; border: none; color: #8899aa; cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 3px; flex-shrink: 0; }
+        .session-item:hover .delete-btn { display: inline; }
+        .session-item .delete-btn:hover { background: rgba(255,80,80,0.3); color: #ff4d4f; }
         .session-time { font-size: 12px; opacity: 0.6; margin-top: 4px; }
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #f7fafc; }
         .chat-header { background: white; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -174,7 +181,14 @@
             }
             var el = document.querySelector('[data-session-id="' + sessionId + '"]');
             if (el) el.classList.add('active');
-            document.getElementById('current-session').textContent = sessionId.slice(0, 28);
+
+            // Use sidebar title as header title
+            var hdrTitle = sessionId.slice(0, 28);
+            if (el) {
+                var titleEl = el.querySelector('.session-title');
+                if (titleEl) hdrTitle = titleEl.textContent;
+            }
+            document.getElementById('current-session').textContent = hdrTitle;
             document.getElementById('send-button').disabled = false;
             
             var response = await fetch('/api/get-messages?session_id=' + sessionId, { headers: authHeaders() });
@@ -302,20 +316,125 @@
             var data = await response.json();
             
             var sessionsList = document.getElementById('sessions-list');
-            sessionsList.innerHTML = '';
-            
+            var existing = {};
+            sessionsList.querySelectorAll('.session-item').forEach(function(el){
+                existing[el.getAttribute('data-session-id')] = el;
+            });
+
+            // Build fragment
+            var frag = document.createDocumentFragment();
             for (var i = 0; i < data.sessions.length; i++) {
                 var s = data.sessions[i];
-                var item = document.createElement('div');
-                item.className = 'session-item' + (s.chat_id === currentSessionId ? ' active' : '');
-                item.setAttribute('data-session-id', s.chat_id);
+                var sid = s.chat_id;
                 var title = s.preview || s.chat_id.slice(0, 20);
-                item.innerHTML = '<div class="session-title">' + title + '</div><div class="session-time">' + s.time + '</div>';
-                item.addEventListener('click', (function(cid) {
-                    return function() { loadSession(cid); };
-                })(s.chat_id));
-                sessionsList.appendChild(item);
+                var isActive = sid === currentSessionId;
+
+                // Preserve existing element if unchanged
+                if (existing[sid]) {
+                    var oldEl = existing[sid];
+                    oldEl.className = 'session-item' + (isActive ? ' active' : '');
+                    var oldTitle = oldEl.querySelector('.session-title');
+                    if (oldTitle && oldTitle.textContent !== title) {
+                        oldTitle.textContent = title;
+                    }
+                    // Ensure rename/delete buttons exist on preserved items
+                    if (!oldEl.querySelector('.rename-btn')) {
+                        var rb = document.createElement('button');
+                        rb.className = 'rename-btn';
+                        rb.title = '重命名';
+                        rb.textContent = '✎';
+                        rb.addEventListener('click', (function(cid, div) {
+                            return function(e) { e.stopPropagation(); startRename(cid, div); };
+                        })(sid, oldTitle));
+                        oldEl.insertBefore(rb, oldEl.querySelector('.session-time'));
+                    }
+                    if (!oldEl.querySelector('.delete-btn')) {
+                        var db = document.createElement('button');
+                        db.className = 'delete-btn';
+                        db.title = '删除';
+                        db.textContent = '✕';
+                        db.addEventListener('click', (function(cid) {
+                            return function(e) { e.stopPropagation(); deleteSession(cid); };
+                        })(sid));
+                        oldEl.insertBefore(db, oldEl.querySelector('.session-time'));
+                    }
+                    frag.appendChild(oldEl);
+                    delete existing[sid];
+                } else {
+                    var item = document.createElement('div');
+                    item.className = 'session-item' + (isActive ? ' active' : '');
+                    item.setAttribute('data-session-id', sid);
+                    item.innerHTML = '<div class="session-title">' + escapeHtml(title) + '</div><button class="rename-btn" title="重命名">✎</button><button class="delete-btn" title="删除">✕</button><div class="session-time" style="flex-shrink:0;">' + escapeHtml(s.time) + '</div>';
+                    item.addEventListener('click', (function(cid) {
+                        return function() { loadSession(cid); };
+                    })(sid));
+                    // Rename button
+                    var renameBtn = item.querySelector('.rename-btn');
+                    var titleDiv = item.querySelector('.session-title');
+                    renameBtn.addEventListener('click', (function(cid, div) {
+                        return function(e) { e.stopPropagation(); startRename(cid, div); };
+                    })(sid, titleDiv));
+                    // Delete button
+                    var deleteBtn = item.querySelector('.delete-btn');
+                    deleteBtn.addEventListener('click', (function(cid) {
+                        return function(e) { e.stopPropagation(); deleteSession(cid); };
+                    })(sid));
+                    frag.appendChild(item);
+                }
             }
+
+            // Remove lingering items that no longer exist in the list
+            for (var key in existing) {
+                existing[key].remove();
+            }
+
+            sessionsList.innerHTML = '';
+            sessionsList.appendChild(frag);
+        }
+
+        function startRename(sessionId, titleDiv) {
+            var oldTitle = titleDiv.textContent;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = oldTitle;
+            input.className = 'session-title-input';
+            input.style.cssText = 'width:100%;padding:2px 4px;border:1px solid #667eea;border-radius:4px;font-size:14px;background:#fff;';
+            input.addEventListener('blur', function(){ commitRename(sessionId, input, titleDiv, oldTitle); });
+            input.addEventListener('keydown', function(e){
+                if (e.key === 'Enter') { commitRename(sessionId, input, titleDiv, oldTitle); }
+                if (e.key === 'Escape') { titleDiv.textContent = oldTitle; input.remove(); }
+            });
+            titleDiv.textContent = '';
+            titleDiv.appendChild(input);
+            input.focus();
+            input.select();
+        }
+
+        async function commitRename(sessionId, input, titleDiv, oldTitle) {
+            var title = input.value.trim() || oldTitle;
+            input.remove();
+            titleDiv.textContent = title;
+            try {
+                await fetch('/api/sessions/' + sessionId + '/title', {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: JSON.stringify({title: title})
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteSession(sessionId) {
+            if (!confirm('确定删除该会话？删除后不可恢复。')) return;
+            try {
+                await fetch('/api/sessions/' + sessionId, { method: 'DELETE', headers: authHeaders() });
+                if (currentSessionId === sessionId) {
+                    currentSessionId = null;
+                    document.getElementById('current-session').textContent = '新对话';
+                    document.getElementById('messages').innerHTML = '<div class="empty-state"><h3>选择一个会话开始聊天</h3></div>';
+                    document.getElementById('send-button').disabled = true;
+                }
+                await refreshSessions();
+            } catch(e) { console.error(e); }
         }
         
         function logout() {
@@ -334,6 +453,7 @@
         }
         
         loadKbList();
+        refreshSessions();  // Override server-rendered sidebar with buttons
     </script>
 </body>
 </html>
