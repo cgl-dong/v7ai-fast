@@ -44,15 +44,19 @@ class SessionService:
         self.db.add(message)
         self.db.commit()
     
-    def get_session_messages(self, chat_id: str) -> List[ChatMessage]:
-        """Get all messages for a session."""
+    def get_session_messages(self, chat_id: str, limit: int = None) -> List[ChatMessage]:
+        """Get messages for a session, most recent first if limit is set."""
         session = self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
         if not session:
             return []
-        return self.db.query(ChatMessage)\
+        q = self.db.query(ChatMessage)\
             .filter(ChatMessage.session_id == session.id)\
-            .order_by(ChatMessage.created_at)\
-            .all()
+            .order_by(ChatMessage.created_at.asc())
+        if limit:
+            # Get last N messages
+            total = q.count()
+            q = q.offset(max(0, total - limit)).limit(limit)
+        return q.all()
     
     def log_event(self, topic: str, operation: str, chat_id: str, user_id: str, 
                   raw_data: str, processed: str = "success", error_message: str = None):

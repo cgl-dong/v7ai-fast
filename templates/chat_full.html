@@ -55,6 +55,11 @@
         .message.assistant-message th { background: #f5f5f5; }
         .message.assistant-message hr { border: none; border-top: 1px solid #eee; margin: 8px 0; }
         .message.assistant-message strong { color: #2d3748; }
+        /* Sources section */
+        .sources { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e8e8e8; font-size: 12px; }
+        .sources .src-title { font-weight: 600; color: #667eea; margin-bottom: 4px; }
+        .sources .src-item { padding: 3px 0; color: #888; }
+        .sources .src-item span { color: #52c41a; margin-right: 4px; }
         .typing-indicator { font-style: italic; color: #888; align-self: flex-start; padding: 12px 16px; }
         .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af; }
         .empty-state h3 { margin-bottom: 10px; }
@@ -144,6 +149,16 @@
         function escapeHtml(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
+        function renderSources(sources) {
+            if (!sources || sources.length === 0) return '';
+            var html = '<div class="sources"><div class="src-title">📚 参考来源</div>';
+            for (var i = 0; i < sources.length; i++) {
+                var s = sources[i];
+                html += '<div class="src-item"><span>●</span>' + escapeHtml(s.filename) + ' (相似度: ' + s.similarity.toFixed(2) + ')</div>';
+            }
+            html += '</div>';
+            return html;
+        }
         
         function authHeaders() {
             var h = { 'Content-Type': 'application/json' };
@@ -228,40 +243,57 @@
             userMessage.textContent = message;
             messages.appendChild(userMessage);
             
-            var typingIndicator = document.createElement('div');
-            typingIndicator.className = 'typing-indicator';
-            typingIndicator.textContent = '正在思考...';
-            messages.appendChild(typingIndicator);
+            var assistantMessage = document.createElement('div');
+            assistantMessage.className = 'message assistant-message';
+            assistantMessage.textContent = '...';
+            messages.appendChild(assistantMessage);
             messages.scrollTop = messages.scrollHeight;
             
+            // ── SSE streaming ──────────────────────────────
+            var fullResponse = '';
             try {
-                var response = await fetch('/api/chat', {
+                var response = await fetch('/api/chat/stream', {
                     method: 'POST',
                     headers: authHeaders(),
                     body: JSON.stringify({ message: message, session_id: currentSessionId, use_kb: useKb, kb_id: kbId })
                 });
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = '';
                 
-                var data = await response.json();
-                currentSessionId = data.session_id;
-                document.getElementById('current-session').textContent = '新对话';
-                
-                messages.removeChild(typingIndicator);
-                
-                var assistantMessage = document.createElement('div');
-                assistantMessage.className = 'message assistant-message';
-                assistantMessage.innerHTML = renderMarkdown(data.response);
-                messages.appendChild(assistantMessage);
-                
-                await refreshSessions();
+                while (true) {
+                    var result = await reader.read();
+                    if (result.done) break;
+                    buffer += decoder.decode(result.value, {stream: true});
+                    
+                    // Parse SSE events
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop() || '';  // Keep incomplete line
+                    
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i];
+                        if (!line.startsWith('data: ')) continue;
+                        try {
+                            var data = JSON.parse(line.slice(6));
+                            if (data.token) {
+                                fullResponse += data.token;
+                                assistantMessage.innerHTML = renderMarkdown(fullResponse);
+                                messages.scrollTop = messages.scrollHeight;
+                            } else if (data.done) {
+                                currentSessionId = data.session_id;
+                                fullResponse += renderSources(data.sources);
+                                assistantMessage.innerHTML = renderMarkdown(fullResponse);
+                            } else if (data.error) {
+                                assistantMessage.innerHTML = '错误: ' + data.error;
+                            }
+                        } catch(e) {}
+                    }
+                }
             } catch (error) {
-                messages.removeChild(typingIndicator);
-                var errorMessage = document.createElement('div');
-                errorMessage.className = 'message assistant-message';
-                errorMessage.textContent = '抱歉，发生了错误，请重试。';
-                messages.appendChild(errorMessage);
+                assistantMessage.innerHTML = '抱歉，发生了错误，请重试。';
             } finally {
                 button.disabled = false;
-                messages.scrollTop = messages.scrollHeight;
+                if (fullResponse) { await refreshSessions(); }
             }
         }
         

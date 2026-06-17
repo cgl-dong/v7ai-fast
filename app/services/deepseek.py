@@ -121,6 +121,51 @@ class AIService:
             result = response.json()
             return result["choices"][0]["message"]["content"]
 
+    async def call_model_stream(self, question: str) -> "AsyncGenerator[str, None]":
+        """Stream AI response token by token via SSE (server-sent events).
+
+        Yields content delta strings as they arrive from the API.
+        Usage:
+            async for token in ai.call_model_stream("问一个问题"):
+                yield f"data: {token}\n\n"
+        """
+        if not self.api_key:
+            raise RuntimeError("API key not configured")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        data = {
+            "model": self.model,
+            "temperature": self.temperature,
+            "messages": [{"role": "user", "content": question}],
+            "stream": True,
+        }
+
+        logger.info(f"AI stream call: url={self.api_url}, model={self.model}")
+
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
+            async with client.stream("POST", self.api_url, headers=headers, json=data) as response:
+                if response.status_code >= 400:
+                    body = await response.aread()
+                    raise RuntimeError(f"AI stream error {response.status_code}: {body[:300]}")
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        chunk = line[6:]
+                        if chunk == "[DONE]":
+                            return
+                        try:
+                            import json
+                            obj = json.loads(chunk)
+                            delta = obj["choices"][0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+
 
 # Keep backward compatibility
 DeepSeekService = AIService

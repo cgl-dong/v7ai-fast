@@ -180,22 +180,38 @@ async def delete_file(file_id: int, db: Session = Depends(get_db)):
 
 # ── 索引操作 ────────────────────────────────────────────────────
 
+def _run_index_task(file_id: int, strategy: str = None, chunk_size: int = None, chunk_overlap: int = None):
+    """Background index task with its own DB session."""
+    import logging
+    logger_bg = logging.getLogger("v7ai-fast.knowledge")
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        indexer = Indexer(db)
+        result = indexer.index_file(file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        logger_bg.info(f"[bg-index] file={file_id} done: {result}")
+    except Exception as e:
+        logger_bg.error(f"[bg-index] file={file_id} failed: {e}")
+    finally:
+        db.close()
+
+
 @router.post("/files/{file_id}/index")
-async def index_file(file_id: int, params: Optional[IndexRequest] = None, db: Session = Depends(get_db)):
-    """对文件进行向量索引（分片→Embedding→存储到pgvector）。
+async def index_file(
+    file_id: int,
+    params: Optional[IndexRequest] = None,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+):
+    """异步索引：立即返回，后台执行分片+Embedding+存储。
 
     请求体可选覆盖切分策略参数：
     ```json
     {"strategy": "section", "chunk_size": 1024, "chunk_overlap": 128}
     ```
-    如果不传，使用上传时保存的策略；如果上传时也没指定，按文件类型走默认。
     """
-    indexer = Indexer(db)
-
-    # 如果有策略参数，优先使用显式传入的；否则看文件记录上存的是什么
-    record = db.query(__import__("app.core.database", fromlist=["KnowledgeFile"]).KnowledgeFile).filter(
-        __import__("app.core.database", fromlist=["KnowledgeFile"]).KnowledgeFile.id == file_id
-    ).first()
+    from app.core.database import KnowledgeFile
+    record = db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="文件不存在")
 
@@ -203,38 +219,29 @@ async def index_file(file_id: int, params: Optional[IndexRequest] = None, db: Se
     chunk_size = params.chunk_size if (params and params.chunk_size) else getattr(record, 'chunk_size', None)
     chunk_overlap = params.chunk_overlap if (params and params.chunk_overlap) else getattr(record, 'chunk_overlap', None)
 
-    try:
-        result = indexer.index_file(file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"索引失败: {str(e)}")
-    return result
+    background_tasks.add_task(_run_index_task, file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    logger.info(f"Index task queued for file={file_id}")
+    return {"message": "索引任务已提交，正在后台处理", "file_id": file_id}
 
 
 @router.post("/files/index-all")
-async def index_all_files(db: Session = Depends(get_db)):
-    """批量索引所有未索引的文件（使用各文件上传时指定的策略或默认策略）"""
+async def index_all_files(db: Session = Depends(get_db), background_tasks: BackgroundTasks = None):
+    """批量异步索引所有未索引的文件（使用各文件上传时指定的策略或默认策略）"""
     from app.core.database import KnowledgeFile
     files = db.query(KnowledgeFile).filter(KnowledgeFile.status != "indexed").all()
     if not files:
         return {"message": "所有文件已索引", "count": 0}
 
-    indexer = Indexer(db)
-    results = []
     for f in files:
-        try:
-            r = indexer.index_file(
-                f.id,
-                strategy=getattr(f, 'chunk_strategy', None),
-                chunk_size=getattr(f, 'chunk_size', None),
-                chunk_overlap=getattr(f, 'chunk_overlap', None),
-            )
-            results.append({"id": f.id, "filename": f.filename, "status": "ok", "chunks": r.get("chunks", 0)})
-        except Exception as e:
-            results.append({"id": f.id, "filename": f.filename, "status": "error", "error": str(e)[:200]})
+        background_tasks.add_task(
+            _run_index_task, f.id,
+            strategy=getattr(f, 'chunk_strategy', None),
+            chunk_size=getattr(f, 'chunk_size', None),
+            chunk_overlap=getattr(f, 'chunk_overlap', None),
+        )
 
-    ok_count = sum(1 for r in results if r["status"] == "ok")
-    err_count = sum(1 for r in results if r["status"] == "error")
-    return {"message": f"索引完成: {ok_count} 成功, {err_count} 失败", "count": len(results), "results": results}
+    logger.info(f"Batch index queued: {len(files)} files")
+    return {"message": f"已提交 {len(files)} 个文件的索引任务，正在后台处理", "count": len(files)}
 
 
 # ── 语义搜索 ────────────────────────────────────────────────────

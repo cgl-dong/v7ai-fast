@@ -1,6 +1,7 @@
 """Web UI endpoints for chat and admin panel."""
+import json
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -704,13 +705,86 @@ async def chat_message(
         session.user_name = user.username
         db.commit()
     session_service.add_message(session.id, str(datetime.now().timestamp()), "user", message)
+
+    # Load recent chat history for memory
+    recent = session_service.get_session_messages(session.chat_id, limit=10)
+    chat_history = [{"role": m.role, "content": m.content} for m in recent]
     
     agent = _get_agent(db, session_id=session_id)
-    answer = await agent.run(message, use_kb=use_kb, kb_id=kb_id)
+    answer = await agent.run(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id)
     
     session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", answer)
+
+    # Collect sources from retrieval
+    sources = []
+    for s in getattr(agent, '_last_sources', []) or []:
+        sources.append({
+            "filename": s.get("filename", ""),
+            "similarity": round(s.get("similarity", 0), 3),
+            "content": (s.get("content", "") or "")[:200],
+        })
     
-    return {"response": answer, "session_id": session_id}
+    return {"response": answer, "session_id": session_id, "sources": sources}
+
+
+@router.post("/api/chat/stream")
+async def chat_message_stream(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """SSE streaming chat endpoint — tokens arrive as they're generated."""
+    data = await request.json()
+    message = data.get("message", "")
+    username_prefix = (user.username if user else "anonymous") + "-web-"
+    session_id = data.get("session_id", username_prefix + str(datetime.now().timestamp()))
+    use_kb = data.get("use_kb", True)
+    kb_id = data.get("kb_id")
+
+    session_service = SessionService(db)
+    user_id = str(user.id) if user else "anonymous"
+    session = session_service.get_or_create_session(session_id, user_id)
+    session_service.add_message(session.id, str(datetime.now().timestamp()), "user", message)
+
+    recent = session_service.get_session_messages(session.chat_id, limit=10)
+    chat_history = [{"role": m.role, "content": m.content} for m in recent]
+
+    agent = _get_agent(db, session_id=session_id)
+
+    async def event_generator():
+        full_answer = ""
+        try:
+            async for token in agent.run_stream(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id):
+                full_answer += token
+                yield f"data: {json.dumps({'token': token})}\n\n"
+
+            # Emit sources after streaming completes
+            sources = []
+            for s in getattr(agent, '_last_sources', []) or []:
+                sources.append({
+                    "filename": s.get("filename", ""),
+                    "similarity": round(s.get("similarity", 0), 3),
+                    "content": (s.get("content", "") or "")[:200],
+                })
+
+            yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'sources': sources})}\n\n"
+        except Exception as e:
+            logger.error(f"SSE error: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        # Save assistant message after streaming completes
+        if full_answer:
+            session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", full_answer)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -995,24 +1069,39 @@ async function downloadFile(id,name){
     }catch(e){alert("下载失败: "+e.message);}
 }
 async function indexFile(id){
-    var btn = event.target; btn.disabled=true; btn.textContent="索引中...";
+    if (!confirm("确认开始索引？索引完成后页面会自动刷新。")) return;
+    var btn = event.target;
+    btn.disabled = true; btn.textContent = "已提交";
     try{
         var r = await fetch(API+"/files/"+id+"/index",{method:"POST"});
-        var d = await r.json();
-        if(r.ok){alert("索引完成: "+d.chunks+" 个分片");loadFiles();loadStats();}
-        else{alert("索引失败: "+(d.detail||"未知错误"));btn.disabled=false;btn.textContent="🔍 索引";}
-    }catch(e){alert("索引失败: "+e.message);btn.disabled=false;btn.textContent="🔍 索引";}
+        if(!r.ok){ var d = await r.json(); alert("提交失败: "+(d.detail||"未知错误")); btn.disabled=false; btn.textContent="🔍 索引"; }
+    } catch(e) { alert("提交失败: "+e.message); btn.disabled=false; btn.textContent="🔍 索引"; }
+    // Poll status every 3s, refresh when done
+    var poll = setInterval(async function(){
+        try{
+            var rr = await fetch(API+"/files/"+id);
+            var dd = await rr.json();
+            if(dd.status === "indexed" || dd.status === "error"){
+                clearInterval(poll);
+                loadFiles(); loadStats();
+            }
+        } catch(e) {}
+    }, 3000);
 }
+var _indexAllRunning = false;
 async function indexAllFiles(){
-    if(!confirm("将索引所有未索引的文件，可能需要几分钟。继续？"))return;
-    var btn = event.target; btn.disabled=true; btn.textContent="索引中...";
+    if(_indexAllRunning) return;
+    if(!confirm("将索引所有未索引的文件，可能需要几分钟。继续？")) return;
+    _indexAllRunning = true;
+    var btn = event.target; btn.disabled = true; btn.textContent = "索引中...";
     try{
         var r = await fetch(API+"/files/index-all",{method:"POST"});
         var d = await r.json();
         alert(d.message);
-        loadFiles();loadStats();
-    }catch(e){alert("批量索引失败: "+e.message);}
-    btn.disabled=false; btn.textContent="🔍 索引全部";
+        loadFiles(); loadStats();
+    } catch(e) { alert("批量索引失败: "+e.message); }
+    _indexAllRunning = false;
+    btn.disabled = false; btn.textContent = "🔍 索引全部";
 }
 async function deleteFile(id){
     if(!confirm("确定要删除这个文件吗？"))return;

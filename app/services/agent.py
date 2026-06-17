@@ -36,6 +36,79 @@ def _format_context(docs: list) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimator: Chinese ~1.5 char/token, EN ~4 char/token."""
+    # Count CJK chars
+    cjk = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+    other = len(text) - cjk
+    return int(cjk / 1.5 + other / 4)
+
+
+def _format_history(messages: List[dict], max_turns: int = 5, max_history_tokens: int = 2000) -> str:
+    """Format recent chat history for prompt injection.
+
+    Token-budget aware: truncates individual messages and the total count
+    to stay within max_history_tokens. Returns empty string if no messages.
+    """
+    if not messages:
+        return ""
+
+    recent = messages[-max_turns * 2:]  # Each turn = user + assistant
+    lines = ["[历史对话]"]
+
+    budget = max_history_tokens
+    for m in reversed(recent):
+        content = m.get("content", "")
+        role = "用户" if m.get("role") == "user" else "助手"
+
+        # Truncate long messages to ~200 tokens each
+        line = f"{role}: {content[:500]}"
+        cost = _estimate_tokens(line)
+
+        if cost > budget:
+            # One more message will exceed budget, truncate it further
+            available = max(budget - _estimate_tokens(f"{role}: "), 50)
+            line = f"{role}: {content[:available * 2]}"  # rough char count
+            lines.append(line)
+            break
+
+        lines.append(line)
+        budget -= cost
+        if budget < 100:
+            break
+
+    lines.reverse()  # Restore chronological order
+    return "\n".join(lines) + "\n\n"
+
+
+async def _summarize_history(ai_service, messages: List[dict]) -> str:
+    """Use LLM to generate a concise summary of conversation history.
+
+    Fires only when history is long enough to benefit from compression.
+    Returns a 1-3 sentence Chinese summary.
+    """
+    if not messages:
+        return ""
+
+    # Build a compact transcript
+    transcript = "\n".join(
+        f"{'用户' if m.get('role')=='user' else '助手'}: {m.get('content','')[:200]}"
+        for m in messages[-10:]
+    )
+
+    prompt = f"""请用1-3句话总结以下对话的核心内容和背景，仅输出摘要：
+
+{transcript}
+
+摘要："""
+
+    try:
+        result = await ai_service.call_model(prompt)
+        return result.strip()[:300]
+    except Exception:
+        return ""
+
+
 class RAGState(TypedDict):
     question: str
     messages: List[dict]
@@ -58,6 +131,7 @@ class RAGAgent:
         self.model_name = self.ai.model
         self._last_trace_id = ""  # For AI Judge to reference
         self._last_node_name = ""
+        self._last_sources = []    # Last retrieved sources for display
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -140,8 +214,10 @@ class RAGAgent:
                     top_sim = results[0]["similarity"]
                     avg_sim = sum(r["similarity"] for r in results) / len(results)
                     logger.info(f"[retrieve] {len(results)} results, top_sim={top_sim:.3f}, avg_sim={avg_sim:.3f}")
+                    self._last_sources = results
                 else:
                     logger.warning(f"[retrieve] no results found for: {question[:80]}")
+                    self._last_sources = []
                 return {"kb_results": results, "context": context}
             except Exception as e:
                 logger.error(f"[retrieve] error: {e}")
@@ -155,19 +231,30 @@ class RAGAgent:
         node_name = "generate_with_docs" if has_context else "generate_no_docs"
         self._last_node_name = node_name
 
+        history = _format_history(state.get("messages", []))
+
+        # If conversation is long, also add a summary for overscroll context
+        all_msgs = state.get("messages", [])
+        if len(all_msgs) > 6:
+            summary = await _summarize_history(self.ai, all_msgs[:-4])  # Summarize older messages
+            if summary:
+                history = f"[对话背景摘要]\n{summary}\n\n{history}"
+
         if has_context:
             prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
 
-知识库内容:
+{history}知识库内容:
 {context}
 
 用户问题: {question}
 
 要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。"""
-            logger.info(f"[{node_name}] RAG mode, context={len(context)} chars, prompt={len(prompt)} chars")
+            logger.info(f"[{node_name}] RAG mode, history={len(state.get('messages', []))}msgs, "
+                        f"context={len(context)} chars, prompt={len(prompt)} chars")
         else:
-            prompt = f"問題: {question}\n\n用中文简洁回答。"
-            logger.info(f"[{node_name}] direct mode, prompt={len(prompt)} chars")
+            prompt = f"{history}问题: {question}\n\n用中文简洁回答。"
+            logger.info(f"[{node_name}] direct mode, history={len(state.get('messages', []))}msgs, "
+                        f"prompt={len(prompt)} chars")
 
         with self.tracer.trace(node_name, self.session_id, "agent_node", self.model_name,
                                {"has_context": has_context}) as ctx:
@@ -257,6 +344,71 @@ class RAGAgent:
                     elapsed2 = time.time() - t0
                     logger.error(f"[agent] fallback failed: {fe}, total_elapsed={elapsed2:.1f}s")
                     return f"处理失败: {e}"
+
+    async def run_stream(self, message: str, chat_history: List[dict] = None,
+                         use_kb: bool = True, kb_id: int = None):
+        """Streaming version: same pipeline, yields SSE-ready tokens.
+
+        Uses classify+retrieve (non-streaming, fast), then streams the generate step.
+        """
+        import time, asyncio
+        t0 = time.time()
+        messages_list = chat_history or []
+        logger.info(f"[agent-stream] start: use_kb={use_kb}, kb_id={kb_id}, session={self.session_id}")
+
+        # ── Classify ──────────────
+        needs_kb = use_kb
+        if use_kb:
+            classify_state = {"question": message, "messages": messages_list}
+            result = await self._classify_node(classify_state)
+            needs_kb = result.get("needs_kb", True)
+
+        # ── Retrieve ──────────────
+        context = ""
+        kb_results = []
+        if needs_kb:
+            retrieve_state = {
+                "question": message, "kb_id": kb_id, "needs_kb": True,
+                "messages": messages_list,
+            }
+            result = await self._retrieve_node(retrieve_state)
+            context = result.get("context", "")
+            kb_results = result.get("kb_results", [])
+            self._last_sources = kb_results
+
+        # ── Generate (streaming) ──
+        if context:
+            history = _format_history(messages_list)
+            all_msgs = messages_list
+            if len(all_msgs) > 6:
+                summary = await _summarize_history(self.ai, all_msgs[:-4])
+                if summary:
+                    history = f"[对话背景摘要]\n{summary}\n\n{history}"
+            prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
+
+{history}知识库内容:
+{context}
+
+用户问题: {message}
+
+要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。"""
+        else:
+            history = _format_history(messages_list)
+            prompt = f"{history}问题: {message}\n\n用中文简洁回答。"
+
+        full_answer = ""
+        try:
+            async for token in self.ai.call_model_stream(prompt):
+                full_answer += token
+                yield token
+        except Exception as e:
+            logger.error(f"[agent-stream] error: {e}")
+            yield f"\n[流式输出中断: {e}]"
+
+        elapsed = time.time() - t0
+        logger.info(f"[agent-stream] done: answer={len(full_answer)} chars, elapsed={elapsed:.1f}s")
+        _fire_judge(self._last_trace_id, self.session_id, message, full_answer, context,
+                    "generate_with_docs" if context else "generate_direct")
 
 
 def _fire_judge(trace_id: str, session_id: str, question: str, answer: str, context: str, node_name: str):

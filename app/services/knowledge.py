@@ -12,12 +12,40 @@ from app.core.settings import settings
 
 logger = logging.getLogger("v7ai-fast.knowledge")
 
-ALLOWED_EXTENSIONS = {"txt", "pdf", "xlsx", "xls", "docx", "md", "csv"}
+ALLOWED_EXTENSIONS = {
+    # 文档
+    "txt", "pdf", "xlsx", "xls", "docx", "md", "csv",
+    # 代码/脚本
+    "py", "js", "ts", "jsx", "tsx", "java", "go", "rs", "rb",
+    "c", "cpp", "h", "hpp", "cs", "swift", "kt", "scala",
+    "r", "jl", "lua", "php",
+    # 配置/数据
+    "json", "yaml", "yml", "xml", "toml", "ini", "cfg", "conf", "env",
+    "properties", "lock",
+    # Web
+    "html", "htm", "css", "scss", "less",
+    # Shell/SQL
+    "sql", "sh", "bash", "bat", "ps1",
+}
+
+# All text-format extensions map to "txt" for parsing
+CODE_LIKE = {
+    "py", "js", "ts", "jsx", "tsx", "java", "go", "rs", "rb",
+    "c", "cpp", "h", "hpp", "cs", "swift", "kt", "scala",
+    "r", "jl", "lua", "php",
+    "json", "yaml", "yml", "xml", "toml", "ini", "cfg", "conf", "env",
+    "properties", "lock",
+    "html", "htm", "css", "scss", "less",
+    "sql", "sh", "bash", "bat", "ps1",
+}
 
 EXTENSION_TO_TYPE = {
     "txt": "txt", "pdf": "pdf", "xlsx": "xlsx", "xls": "xlsx",
-    "docx": "docx", "md": "md", "csv": "csv"
+    "docx": "docx", "md": "md", "csv": "csv",
 }
+# Code/config files all treated as text
+for ext in CODE_LIKE:
+    EXTENSION_TO_TYPE[ext] = "txt"
 
 
 class KnowledgeService:
