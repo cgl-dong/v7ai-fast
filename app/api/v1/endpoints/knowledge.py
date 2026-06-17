@@ -1,0 +1,386 @@
+"""知识库文件上传/下载/索引 API"""
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, BackgroundTasks
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+from app.core.database import get_db
+from app.core.logging import logger
+from app.services.knowledge import KnowledgeService
+from app.services.indexer import Indexer
+from app.services.kb_service import KnowledgeBaseService
+from app.services.chunking import list_strategies as get_available_strategies
+from minio.error import S3Error
+from urllib.parse import quote
+import io
+from typing import Optional
+
+router = APIRouter()
+
+
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
+    kb_id: Optional[int] = None
+
+
+class IndexRequest(BaseModel):
+    """索引参数：覆盖该文件的默认分片策略"""
+    strategy: Optional[str] = Field(None, description="切分策略: recursive/sentence/section/qa/semantic/token/paragraph/fixed/excel")
+    chunk_size: Optional[int] = Field(None, ge=64, le=8192, description="每片字符数")
+    chunk_overlap: Optional[int] = Field(None, ge=0, le=2048, description="重叠字符数")
+
+
+def _to_file_info(f, kb_map: dict = None) -> dict:
+    info = {
+        "id": f.id,
+        "kb_id": getattr(f, 'kb_id', None),
+        "kb_name": kb_map.get(f.kb_id) if kb_map and f.kb_id else None,
+        "filename": f.filename,
+        "file_type": f.file_type,
+        "file_size": f.file_size,
+        "status": f.status,
+        "chunk_count": f.chunk_count,
+        "chunk_strategy": getattr(f, 'chunk_strategy', None),
+        "chunk_size": getattr(f, 'chunk_size', None),
+        "chunk_overlap": getattr(f, 'chunk_overlap', None),
+        "error_msg": f.error_msg,
+        "uploader": f.uploader or "anonymous",
+        "created_at": f.created_at.isoformat() if f.created_at else ""
+    }
+    return info
+
+
+# ── 可用策略列表 ────────────────────────────────────────────────
+
+@router.get("/chunk-strategies")
+async def list_chunk_strategies():
+    """返回所有可用的分片策略及说明"""
+    return {
+        "strategies": get_available_strategies(),
+        "defaults_per_file_type": {k: {
+            "strategy": v.strategy,
+            "chunk_size": v.chunk_size,
+            "chunk_overlap": v.chunk_overlap,
+        } for k, v in __import__("app.services.chunking", fromlist=["CHUNK_CONFIG"]).CHUNK_CONFIG.items()}
+    }
+
+
+# ── 文件 CRUD ───────────────────────────────────────────────────
+
+@router.get("/files")
+async def list_files(file_type: str = Query(None), db: Session = Depends(get_db)):
+    svc = KnowledgeService(db)
+    files = svc.get_all_files(file_type=file_type)
+    kb_map = _load_kb_map(db)
+    return {"files": [_to_file_info(f, kb_map) for f in files], "total": len(files)}
+
+
+@router.get("/files/stats")
+async def file_stats(db: Session = Depends(get_db)):
+    svc = KnowledgeService(db)
+    return svc.get_file_stats()
+
+
+@router.get("/files/{file_id}")
+async def get_file_info(file_id: int, db: Session = Depends(get_db)):
+    svc = KnowledgeService(db)
+    f = svc.get_file_by_id(file_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    return _to_file_info(f)
+
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    strategy: Optional[str] = Query(None, description="切分策略，不传则按文件类型自动选择"),
+    chunk_size: Optional[int] = Query(None, ge=64, le=8192, description="每片字符数"),
+    chunk_overlap: Optional[int] = Query(None, ge=0, le=2048, description="重叠字符数"),
+    db: Session = Depends(get_db),
+):
+    """上传文件，可选指定分片策略。
+
+    策略参数会保存到文件记录中，后续索引时自动使用。
+    如果不传，索引时按文件类型走默认配置。
+    """
+    svc = KnowledgeService(db)
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="文件为空")
+    try:
+        record = svc.save_upload(
+            content, file.filename or "unknown",
+            chunk_strategy=strategy,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except S3Error as e:
+        logger.error(f"MinIO upload error: {e}")
+        raise HTTPException(status_code=503, detail=f"MinIO 存储服务异常: {e.message}")
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        raise HTTPException(status_code=503, detail=f"上传失败: {str(e)}")
+    return {"message": "上传成功", "file": _to_file_info(record)}
+
+
+@router.get("/download/{file_id}")
+async def download_file(file_id: int, db: Session = Depends(get_db)):
+    svc = KnowledgeService(db)
+    try:
+        content, filename, content_type = svc.get_file_content(file_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=content_type,
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"}
+    )
+
+
+@router.get("/files/{file_id}/preview")
+async def preview_file(file_id: int, max_chars: int = Query(10000, ge=1000, le=50000), db: Session = Depends(get_db)):
+    """预览文件解析后的文本内容"""
+    svc = KnowledgeService(db)
+    record = svc.get_file_by_id(file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    try:
+        content_bytes, _, _ = svc.get_file_content(file_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Parse with same logic as indexer
+    from app.services.indexer import Indexer
+    idx = Indexer(db)
+    text = idx._parse_content(content_bytes, record.filename, record.file_type)
+
+    truncated = len(text) > max_chars
+    text = text[:max_chars]
+    return {
+        "file_id": file_id,
+        "filename": record.filename,
+        "file_type": record.file_type,
+        "file_size": record.file_size,
+        "content": text,
+        "content_length": len(text),
+        "truncated": truncated,
+    }
+
+
+@router.delete("/files/{file_id}")
+async def delete_file(file_id: int, db: Session = Depends(get_db)):
+    svc = KnowledgeService(db)
+    success = svc.delete_file(file_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    return {"message": "删除成功"}
+
+
+# ── 索引操作 ────────────────────────────────────────────────────
+
+def _run_index_task(file_id: int, strategy: str = None, chunk_size: int = None, chunk_overlap: int = None):
+    """Background index task with its own DB session."""
+    import logging
+    logger_bg = logging.getLogger("v7ai-fast.knowledge")
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        indexer = Indexer(db)
+        result = indexer.index_file(file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        logger_bg.info(f"[bg-index] file={file_id} done: {result}")
+    except Exception as e:
+        logger_bg.error(f"[bg-index] file={file_id} failed: {e}")
+    finally:
+        db.close()
+
+
+@router.post("/files/{file_id}/index")
+async def index_file(
+    file_id: int,
+    params: Optional[IndexRequest] = None,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+):
+    """异步索引：立即返回，后台执行分片+Embedding+存储。
+
+    请求体可选覆盖切分策略参数：
+    ```json
+    {"strategy": "section", "chunk_size": 1024, "chunk_overlap": 128}
+    ```
+    """
+    from app.core.database import KnowledgeFile
+    record = db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    strategy = params.strategy if (params and params.strategy) else getattr(record, 'chunk_strategy', None)
+    chunk_size = params.chunk_size if (params and params.chunk_size) else getattr(record, 'chunk_size', None)
+    chunk_overlap = params.chunk_overlap if (params and params.chunk_overlap) else getattr(record, 'chunk_overlap', None)
+
+    background_tasks.add_task(_run_index_task, file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    logger.info(f"Index task queued for file={file_id}")
+    return {"message": "索引任务已提交，正在后台处理", "file_id": file_id}
+
+
+@router.post("/files/index-all")
+async def index_all_files(db: Session = Depends(get_db), background_tasks: BackgroundTasks = None):
+    """批量异步索引所有未索引的文件（使用各文件上传时指定的策略或默认策略）"""
+    from app.core.database import KnowledgeFile
+    files = db.query(KnowledgeFile).filter(KnowledgeFile.status != "indexed").all()
+    if not files:
+        return {"message": "所有文件已索引", "count": 0}
+
+    for f in files:
+        background_tasks.add_task(
+            _run_index_task, f.id,
+            strategy=getattr(f, 'chunk_strategy', None),
+            chunk_size=getattr(f, 'chunk_size', None),
+            chunk_overlap=getattr(f, 'chunk_overlap', None),
+        )
+
+    logger.info(f"Batch index queued: {len(files)} files")
+    return {"message": f"已提交 {len(files)} 个文件的索引任务，正在后台处理", "count": len(files)}
+
+
+# ── 语义搜索 ────────────────────────────────────────────────────
+
+@router.post("/search")
+async def search_knowledge(req: SearchRequest, db: Session = Depends(get_db)):
+    """语义搜索知识库（支持按知识库筛选）"""
+    if not req.query.strip():
+        raise HTTPException(status_code=400, detail="查询内容不能为空")
+    indexer = Indexer(db)
+    try:
+        results = indexer.search_chunks(req.query, req.top_k, req.kb_id)
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
+    return {"query": req.query, "results": results, "count": len(results)}
+
+
+# ── 知识库分类管理 ─────────────────────────────────────────────
+
+class KBCreate(BaseModel):
+    name: str
+    description: str = ""
+
+
+class KBUpdate(BaseModel):
+    name: str = None
+    description: str = None
+    is_active: bool = None
+
+
+class FileMoveRequest(BaseModel):
+    kb_id: int = None  # None = remove from KB
+
+
+class BatchMoveRequest(BaseModel):
+    file_ids: list[int]
+    kb_id: int = None  # None = remove from KB
+
+
+# ── Helper ───────────────────────────────────────────────────────
+
+def _load_kb_map(db: Session) -> dict:
+    """Load all knowledge bases into {id: name} dict for efficient lookups."""
+    from app.core.database import KnowledgeBase
+    kbs = db.query(KnowledgeBase).all()
+    return {k.id: k.name for k in kbs}
+
+
+@router.get("/kb")
+async def list_knowledge_bases(db: Session = Depends(get_db)):
+    """列出所有活跃的知识库分类（聊天用）"""
+    svc = KnowledgeBaseService(db)
+    kbs = svc.get_active()  # Only active KBs
+    return {"knowledge_bases": [{"id": k.id, "name": k.name, "description": k.description,
+            "is_active": k.is_active, "created_at": k.created_at.isoformat() if k.created_at else ""} for k in kbs]}
+
+
+@router.post("/kb")
+async def create_knowledge_base(data: KBCreate, db: Session = Depends(get_db)):
+    """创建知识库分类"""
+    svc = KnowledgeBaseService(db)
+    try:
+        kb = svc.create(data.name, data.description)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"创建失败: {e}")
+    return {"id": kb.id, "name": kb.name, "message": "创建成功"}
+
+
+@router.put("/kb/{kb_id}")
+async def update_knowledge_base(kb_id: int, data: KBUpdate, db: Session = Depends(get_db)):
+    svc = KnowledgeBaseService(db)
+    kb = svc.update(kb_id, data.model_dump(exclude_none=True))
+    if not kb:
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"id": kb.id, "message": "更新成功"}
+
+
+@router.delete("/kb/{kb_id}")
+async def deactivate_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """停用知识库（软删除，文档绑定保留）"""
+    svc = KnowledgeBaseService(db)
+    if not svc.deactivate(kb_id):
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"message": "知识库已停用"}
+
+
+@router.put("/kb/{kb_id}/activate")
+async def activate_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """重新启用知识库"""
+    svc = KnowledgeBaseService(db)
+    if not svc.activate(kb_id):
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"message": "知识库已启用"}
+
+
+@router.delete("/kb/{kb_id}/hard")
+async def hard_delete_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """物理删除知识库（清除关联文档的绑定）"""
+    svc = KnowledgeBaseService(db)
+    if not svc.hard_delete(kb_id):
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"message": "知识库已彻底删除"}
+
+
+@router.get("/kb/with-counts")
+async def list_kb_with_counts(db: Session = Depends(get_db)):
+    """列出知识库并附带文档数量"""
+    svc = KnowledgeBaseService(db)
+    return {"knowledge_bases": svc.get_with_file_counts()}
+
+
+@router.put("/files/{file_id}/move")
+async def move_file_to_kb(file_id: int, data: FileMoveRequest, db: Session = Depends(get_db)):
+    """将文件移动到指定知识库"""
+    from app.core.database import KnowledgeFile
+    f = db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    f.kb_id = data.kb_id
+    db.commit()
+    kb_name = "通用"
+    if data.kb_id:
+        kb = KnowledgeBaseService(db).get_by_id(data.kb_id)
+        kb_name = kb.name if kb else str(data.kb_id)
+    return {"message": f"已移至: {kb_name}", "kb_id": data.kb_id}
+
+
+@router.post("/files/move-batch")
+async def batch_move_files(data: BatchMoveRequest, db: Session = Depends(get_db)):
+    """批量移动文件到指定知识库"""
+    from app.core.database import KnowledgeFile
+    updated = db.query(KnowledgeFile).filter(KnowledgeFile.id.in_(data.file_ids)).update(
+        {"kb_id": data.kb_id}, synchronize_session=False
+    )
+    db.commit()
+    kb_name = "通用"
+    if data.kb_id:
+        kb = KnowledgeBaseService(db).get_by_id(data.kb_id)
+        kb_name = kb.name if kb else str(data.kb_id)
+    logger.info(f"Batch moved {updated} files to KB: {kb_name} (id={data.kb_id})")
+    return {"message": f"已将 {updated} 个文件移至: {kb_name}", "count": updated, "kb_id": data.kb_id}

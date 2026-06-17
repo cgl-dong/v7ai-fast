@@ -7,8 +7,10 @@ from typing import Optional
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-ACCESS_KEY = "AK20260520ZSVODH"
-SECRET_KEY = "SKpmrxtgmbrhwtyc"
+from app.core.settings import settings
+
+ACCESS_KEY = settings.woa_config_app_id
+SECRET_KEY = settings.woa_config_app_key
 
 
 def get_signature(data: str, secret: str) -> str:

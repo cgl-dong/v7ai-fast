@@ -16,6 +16,18 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_model: str = ""
 
+    # MinIO Configuration
+    minio_endpoint: str = "10.12.33.92:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "knowledge-base"
+    minio_secure: bool = False
+
+    # AI Judge Configuration (LLM-as-Judge 自动评价)
+    judge_enabled: bool = False       # 是否在每次回答后自动触发 AI 评价
+    judge_model: str = ""             # 裁判模型，为空则复用 deepseek_model
+    judge_temperature: float = 0.1    # 低温度保证评分一致性
+
     # JWT Configuration
     secret_key: str = ""
     algorithm: str = "HS256"

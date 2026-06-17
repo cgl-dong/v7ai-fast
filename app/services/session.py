@@ -1,9 +1,13 @@
 """Service for managing chat sessions and messages."""
+import logging
+import uuid
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List
 
 from app.core.database import ChatSession, ChatMessage, EventLog
+
+logger = logging.getLogger("v7ai-fast.session")
 
 
 class SessionService:
@@ -11,6 +15,10 @@ class SessionService:
     
     def __init__(self, db: Session):
         self.db = db
+
+    def get_by_chat_id(self, chat_id: str) -> Optional[ChatSession]:
+        """Get a session by chat_id."""
+        return self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
     
     def get_or_create_session(self, chat_id: str, user_id: str = None) -> ChatSession:
         """Get or create a chat session."""
@@ -28,6 +36,8 @@ class SessionService:
     
     def add_message(self, session_id: int, message_id: str, role: str, content: str):
         """Add a message to a session."""
+        if not message_id:
+            message_id = uuid.uuid4().hex
         message = ChatMessage(
             session_id=session_id,
             message_id=message_id,
@@ -38,15 +48,19 @@ class SessionService:
         self.db.add(message)
         self.db.commit()
     
-    def get_session_messages(self, chat_id: str) -> List[ChatMessage]:
-        """Get all messages for a session."""
+    def get_session_messages(self, chat_id: str, limit: int = None) -> List[ChatMessage]:
+        """Get messages for a session, most recent first if limit is set."""
         session = self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
         if not session:
             return []
-        return self.db.query(ChatMessage)\
+        q = self.db.query(ChatMessage)\
             .filter(ChatMessage.session_id == session.id)\
-            .order_by(ChatMessage.created_at)\
-            .all()
+            .order_by(ChatMessage.created_at.asc())
+        if limit:
+            # Get last N messages
+            total = q.count()
+            q = q.offset(max(0, total - limit)).limit(limit)
+        return q.all()
     
     def log_event(self, topic: str, operation: str, chat_id: str, user_id: str, 
                   raw_data: str, processed: str = "success", error_message: str = None):
