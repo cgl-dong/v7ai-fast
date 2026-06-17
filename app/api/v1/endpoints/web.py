@@ -760,7 +760,7 @@ async def session_detail(request: Request, chat_id: str, db: Session = Depends(g
         messages_html += f"""
         <div class="message {msg.role}-message">
             <div class="message-header">{msg.role.capitalize()}</div>
-            <div>{msg.content}</div>
+            <div class="msg-content">{msg.content}</div>
             <div class="time">{msg.created_at.strftime('%Y-%m-%d %H:%M:%S')}</div>
         </div>
         """
@@ -791,7 +791,12 @@ async def session_detail(request: Request, chat_id: str, db: Session = Depends(g
         .time {{ color: #888; font-size: 12px; text-align: right; margin-top: 5px; }}
         .btn {{ display: inline-block; padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 14px; margin-top: 20px; }}
         .btn:hover {{ background: #5a6fd6; }}
+        .msg-content p {{ margin: 4px 0; }}
+        .msg-content ul, .msg-content ol {{ padding-left: 20px; }}
+        .msg-content code {{ background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }}
+        .msg-content pre {{ background: #2d3748; color: #e2e8f0; padding: 10px; border-radius: 6px; overflow-x: auto; }}
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="header">
@@ -805,6 +810,15 @@ async def session_detail(request: Request, chat_id: str, db: Session = Depends(g
             <a href="/admin" class="btn">Back to Admin</a>
         </div>
     </div>
+    <script>
+        if (typeof marked !== 'undefined') {{
+            marked.setOptions({{ breaks: true, gfm: true }});
+            var elms = document.querySelectorAll('.assistant-message .msg-content');
+            elms.forEach(function(el) {{
+                el.innerHTML = marked.parse(el.textContent);
+            }});
+        }}
+    </script>
 </body>
 </html>
     """
@@ -860,6 +874,13 @@ async def knowledge_page(request: Request):
         .type-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; background: #f5f5f5; color: #666; margin-right: 4px; }
         .empty-state { text-align: center; padding: 40px; color: #999; }
         .loading { text-align: center; padding: 20px; color: #999; }
+        /* Preview modal */
+        .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:1000;justify-content:center;align-items:center}
+        .modal-overlay.show{display:flex}
+        .modal{background:#fff;border-radius:8px;padding:24px;width:680px;max-width:95vw;max-height:85vh;overflow-y:auto}
+        .modal h3{margin-bottom:12px;font-size:16px}
+        .modal .preview-content{white-space:pre-wrap;font-family:Consolas,monospace;font-size:13px;line-height:1.6;background:#fafafa;padding:12px;border-radius:6px;max-height:60vh;overflow-y:auto}
+        .modal .meta{font-size:12px;color:#999;margin-bottom:8px}
     </style>
 </head>
 <body>
@@ -907,6 +928,16 @@ async def knowledge_page(request: Request):
         <div id="fileList"><div class="loading">加载中...</div></div>
     </div>
 </div>
+<div class="modal-overlay" id="previewModal">
+    <div class="modal">
+        <h3>📄 文件预览</h3>
+        <div class="meta" id="previewMeta"></div>
+        <div class="preview-content" id="previewContent">加载中...</div>
+        <div style="margin-top:12px;text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('previewModal').classList.remove('show')" style="background:#f5f5f5;color:#666;">关闭</button>
+        </div>
+    </div>
+</div>
 <script>
 const API = "/api/v1/knowledge";
 async function loadStats(){
@@ -929,12 +960,13 @@ async function loadFiles(){
         const r = await fetch(API+"/files");
         const d = await r.json();
         if(!d.files||d.files.length===0){el.innerHTML='<div class="empty-state">暂无文件，请上传</div>';return;}
-        let h = '<table class="file-table"><thead><tr><th>文件名</th><th>类型</th><th>大小</th><th>状态</th><th>分片</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
+        let h = '<table class="file-table"><thead><tr><th>文件名</th><th>类型</th><th>大小</th><th>知识库</th><th>状态</th><th>分片</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
         d.files.forEach(function(f){
             var sz = f.file_size < 1024 ? f.file_size+'B' : f.file_size < 1048576 ? (f.file_size/1024).toFixed(1)+'KB' : (f.file_size/1048576).toFixed(1)+'MB';
             var ts = f.created_at ? f.created_at.slice(0,16).replace('T',' ') : '';
             var fn = he(f.filename);
-            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="indexFile('+f.id+')" style="background:#f6ad55;color:#fff;border:none;">🔍 索引</button> <button class="btn btn-ghost btn-sm" onclick="downloadFile('+f.id+',\''+fn+'\')">⬇下载</button> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑删除</button></td></tr>';
+            var kbTag = f.kb_name ? '<span style="background:#f0f2f5;padding:2px 8px;border-radius:4px;font-size:12px;cursor:pointer;" title="'+he(f.kb_name)+'">'+he(f.kb_name.slice(0,8))+'</span>' : '<span style="color:#ccc;font-size:12px;">未分类</span>';
+            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td>'+kbTag+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="previewFile('+f.id+',\''+fn+'\')" style="background:#1890ff;color:#fff;border:none;">👁 预览</button> <button class="btn btn-ghost btn-sm" onclick="indexFile('+f.id+')" style="background:#f6ad55;color:#fff;border:none;">🔍 索引</button> <select class="kb-select" onchange="moveFileToKb('+f.id+',this.value)" style="padding:2px 4px;font-size:11px;border-radius:4px;max-width:80px;"><option value="">移动至...</option><option value="">未分类</option>'+kbMoveOptions+'</select> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑</button></td></tr>';
         });
         h += '</tbody></table>';
         el.innerHTML = h;
@@ -991,6 +1023,21 @@ async function deleteFile(id){
 }
 function he(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function sl(s){return {uploaded:'已上传',indexed:'已索引',error:'失败'}[s]||s;}
+async function previewFile(fileId,filename){
+    var modal=document.getElementById("previewModal");
+    var contentEl=document.getElementById("previewContent");
+    var metaEl=document.getElementById("previewMeta");
+    modal.classList.add("show");
+    contentEl.textContent="加载中...";
+    metaEl.textContent="";
+    try{
+        var r=await fetch(API+"/files/"+fileId+"/preview");
+        if(!r.ok){contentEl.textContent="加载失败: "+r.status;return;}
+        var d=await r.json();
+        metaEl.textContent=he(d.filename)+" ("+d.file_type.toUpperCase()+", "+d.file_size+"B, "+d.content_length+"字"+(d.truncated?" 已截断":"")+")";
+        contentEl.textContent=d.content||"(空文件)";
+    }catch(e){contentEl.textContent="加载失败: "+e.message;}
+}
 (function(){
     var ua = document.getElementById("uploadArea");
     ua.addEventListener("dragover",function(e){e.preventDefault();ua.classList.add("dragover");});
@@ -998,12 +1045,18 @@ function sl(s){return {uploaded:'已上传',indexed:'已索引',error:'失败'}[
     ua.addEventListener("drop",function(e){e.preventDefault();ua.classList.remove("dragover");handleUpload(e.dataTransfer.files[0]);});
 })();
 function logout(){document.cookie="access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";}
+var kbMoveOptions = "";
 async function loadKBList(){
     try{
-        var r=await fetch(API+"/kb");var d=await r.json();
+        var r=await fetch(API+"/kb/with-counts");var d=await r.json();
         var el=document.getElementById("kbList");el.innerHTML="";
+        kbMoveOptions = "";
         d.knowledge_bases.forEach(function(k){
-            el.innerHTML+='<div style="padding:6px 14px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px;"><span>'+k.name+'</span><span style="color:#999;font-size:11px;">'+(k.description||"")+'</span><button class="btn btn-danger btn-sm" onclick="deleteKB('+k.id+')" style="padding:2px 8px;font-size:11px;">×</button></div>';
+            var activeTag = k.is_active ? '<span style="color:#52c41a;font-size:11px;">● 启用</span>' : '<span style="color:#ccc;font-size:11px;">○ 已停用</span>';
+            var toggleBtn = k.is_active ? '<button class="btn btn-sm" onclick="deactivateKB('+k.id+')" style="padding:2px 8px;font-size:11px;background:#faad14;color:#fff;border:none;">停用</button>' : '<button class="btn btn-sm" onclick="activateKB('+k.id+')" style="padding:2px 8px;font-size:11px;background:#52c41a;color:#fff;border:none;">启用</button>';
+            var delBtn = '<button class="btn btn-sm" onclick="hardDeleteKB('+k.id+',\''+he(k.name)+'\')" style="padding:2px 8px;font-size:11px;background:#ff4d4f;color:#fff;border:none;">×</button>';
+            el.innerHTML+='<div style="padding:6px 14px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:13px;"><span>'+he(k.name)+'</span>'+activeTag+'<span style="color:#999;font-size:11px;">('+(k.file_count||0)+'个文件)</span><span style="color:#999;font-size:11px;">'+(k.description||"")+'</span>'+toggleBtn+delBtn+'</div>';
+            if (k.is_active) { kbMoveOptions += '<option value="'+k.id+'">'+he(k.name)+'</option>'; }
         });
     }catch(e){console.error(e)}
 }
@@ -1016,9 +1069,18 @@ async function createKB(){
         else{alert("创建失败");}
     }catch(e){alert("创建失败: "+e.message)}
 }
-async function deleteKB(id){
-    if(!confirm("删除知识库不会删除文件，文件将变为未分类。继续？"))return;
+async function deactivateKB(id){
+    if(!confirm("停用后该知识库不会显示在聊天选择中，已有文档绑定保留。继续？"))return;
     try{await fetch(API+"/kb/"+id,{method:"DELETE"});loadKBList();loadFiles();}
+    catch(e){alert("操作失败: "+e.message)}
+}
+async function activateKB(id){
+    try{await fetch(API+"/kb/"+id+"/activate",{method:"PUT"});loadKBList();loadFiles();}
+    catch(e){alert("启用失败: "+e.message)}
+}
+async function hardDeleteKB(id,name){
+    if(!confirm("彻底删除知识库【"+name+"】？关联文档将变为未分类。此操作不可恢复！"))return;
+    try{await fetch(API+"/kb/"+id+"/hard",{method:"DELETE"});loadKBList();loadFiles();}
     catch(e){alert("删除失败: "+e.message)}
 }
 async function moveFileToKb(fileId,kbId){

@@ -30,10 +30,11 @@ class IndexRequest(BaseModel):
     chunk_overlap: Optional[int] = Field(None, ge=0, le=2048, description="重叠字符数")
 
 
-def _to_file_info(f) -> dict:
-    return {
+def _to_file_info(f, kb_map: dict = None) -> dict:
+    info = {
         "id": f.id,
         "kb_id": getattr(f, 'kb_id', None),
+        "kb_name": kb_map.get(f.kb_id) if kb_map and f.kb_id else None,
         "filename": f.filename,
         "file_type": f.file_type,
         "file_size": f.file_size,
@@ -46,6 +47,7 @@ def _to_file_info(f) -> dict:
         "uploader": f.uploader or "anonymous",
         "created_at": f.created_at.isoformat() if f.created_at else ""
     }
+    return info
 
 
 # ── 可用策略列表 ────────────────────────────────────────────────
@@ -69,7 +71,8 @@ async def list_chunk_strategies():
 async def list_files(file_type: str = Query(None), db: Session = Depends(get_db)):
     svc = KnowledgeService(db)
     files = svc.get_all_files(file_type=file_type)
-    return {"files": [_to_file_info(f) for f in files], "total": len(files)}
+    kb_map = _load_kb_map(db)
+    return {"files": [_to_file_info(f, kb_map) for f in files], "total": len(files)}
 
 
 @router.get("/files/stats")
@@ -134,6 +137,36 @@ async def download_file(file_id: int, db: Session = Depends(get_db)):
         media_type=content_type,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"}
     )
+
+
+@router.get("/files/{file_id}/preview")
+async def preview_file(file_id: int, max_chars: int = Query(10000, ge=1000, le=50000), db: Session = Depends(get_db)):
+    """预览文件解析后的文本内容"""
+    svc = KnowledgeService(db)
+    record = svc.get_file_by_id(file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="文件不存在")
+    try:
+        content_bytes, _, _ = svc.get_file_content(file_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Parse with same logic as indexer
+    from app.services.indexer import Indexer
+    idx = Indexer(db)
+    text = idx._parse_content(content_bytes, record.filename, record.file_type)
+
+    truncated = len(text) > max_chars
+    text = text[:max_chars]
+    return {
+        "file_id": file_id,
+        "filename": record.filename,
+        "file_type": record.file_type,
+        "file_size": record.file_size,
+        "content": text,
+        "content_length": len(text),
+        "truncated": truncated,
+    }
 
 
 @router.delete("/files/{file_id}")
@@ -237,11 +270,25 @@ class FileMoveRequest(BaseModel):
     kb_id: int = None  # None = remove from KB
 
 
+class BatchMoveRequest(BaseModel):
+    file_ids: list[int]
+    kb_id: int = None  # None = remove from KB
+
+
+# ── Helper ───────────────────────────────────────────────────────
+
+def _load_kb_map(db: Session) -> dict:
+    """Load all knowledge bases into {id: name} dict for efficient lookups."""
+    from app.core.database import KnowledgeBase
+    kbs = db.query(KnowledgeBase).all()
+    return {k.id: k.name for k in kbs}
+
+
 @router.get("/kb")
 async def list_knowledge_bases(db: Session = Depends(get_db)):
-    """列出所有知识库分类"""
+    """列出所有活跃的知识库分类（聊天用）"""
     svc = KnowledgeBaseService(db)
-    kbs = svc.get_all()
+    kbs = svc.get_active()  # Only active KBs
     return {"knowledge_bases": [{"id": k.id, "name": k.name, "description": k.description,
             "is_active": k.is_active, "created_at": k.created_at.isoformat() if k.created_at else ""} for k in kbs]}
 
@@ -267,11 +314,37 @@ async def update_knowledge_base(kb_id: int, data: KBUpdate, db: Session = Depend
 
 
 @router.delete("/kb/{kb_id}")
-async def delete_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+async def deactivate_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """停用知识库（软删除，文档绑定保留）"""
     svc = KnowledgeBaseService(db)
-    if not svc.delete(kb_id):
+    if not svc.deactivate(kb_id):
         raise HTTPException(status_code=404, detail="知识库不存在")
-    return {"message": "删除成功"}
+    return {"message": "知识库已停用"}
+
+
+@router.put("/kb/{kb_id}/activate")
+async def activate_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """重新启用知识库"""
+    svc = KnowledgeBaseService(db)
+    if not svc.activate(kb_id):
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"message": "知识库已启用"}
+
+
+@router.delete("/kb/{kb_id}/hard")
+async def hard_delete_knowledge_base(kb_id: int, db: Session = Depends(get_db)):
+    """物理删除知识库（清除关联文档的绑定）"""
+    svc = KnowledgeBaseService(db)
+    if not svc.hard_delete(kb_id):
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    return {"message": "知识库已彻底删除"}
+
+
+@router.get("/kb/with-counts")
+async def list_kb_with_counts(db: Session = Depends(get_db)):
+    """列出知识库并附带文档数量"""
+    svc = KnowledgeBaseService(db)
+    return {"knowledge_bases": svc.get_with_file_counts()}
 
 
 @router.put("/files/{file_id}/move")
@@ -288,3 +361,19 @@ async def move_file_to_kb(file_id: int, data: FileMoveRequest, db: Session = Dep
         kb = KnowledgeBaseService(db).get_by_id(data.kb_id)
         kb_name = kb.name if kb else str(data.kb_id)
     return {"message": f"已移至: {kb_name}", "kb_id": data.kb_id}
+
+
+@router.post("/files/move-batch")
+async def batch_move_files(data: BatchMoveRequest, db: Session = Depends(get_db)):
+    """批量移动文件到指定知识库"""
+    from app.core.database import KnowledgeFile
+    updated = db.query(KnowledgeFile).filter(KnowledgeFile.id.in_(data.file_ids)).update(
+        {"kb_id": data.kb_id}, synchronize_session=False
+    )
+    db.commit()
+    kb_name = "通用"
+    if data.kb_id:
+        kb = KnowledgeBaseService(db).get_by_id(data.kb_id)
+        kb_name = kb.name if kb else str(data.kb_id)
+    logger.info(f"Batch moved {updated} files to KB: {kb_name} (id={data.kb_id})")
+    return {"message": f"已将 {updated} 个文件移至: {kb_name}", "count": updated, "kb_id": data.kb_id}
