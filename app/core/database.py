@@ -59,7 +59,7 @@ class DocumentChunk(Base):
     file_id = Column(Integer, ForeignKey("knowledge_files.id", ondelete="CASCADE"), nullable=False, index=True)
     chunk_index = Column(Integer, default=0, comment="分片序号")
     content = Column(Text, nullable=False, comment="分片文本内容")
-    embedding = Column(Vector(384), nullable=True, comment="文本向量(384维)") if VECTOR_AVAILABLE else Column(Text, nullable=True)
+    embedding = Column(Vector(768), nullable=True, comment="文本向量(768维, bge-base-zh-v1.5)") if VECTOR_AVAILABLE else Column(Text, nullable=True)
     metadata_json = Column(Text, comment="元数据JSON(来源/页码/工作表等)")
     created_at = Column(DateTime, default=datetime.now)
 
@@ -163,6 +163,9 @@ class KnowledgeFile(Base):
     status = Column(String(20), default="uploaded", index=True, comment="状态: uploaded/indexed/error")
     error_msg = Column(Text, comment="错误信息")
     chunk_count = Column(Integer, default=0, comment="分片数量")
+    chunk_strategy = Column(String(20), comment="切分策略: recursive/sentence/section/qa/semantic/token/paragraph/fixed/excel")
+    chunk_size = Column(Integer, comment="每片字符数")
+    chunk_overlap = Column(Integer, comment="重叠字符数")
     uploader = Column(String(100), comment="上传者")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

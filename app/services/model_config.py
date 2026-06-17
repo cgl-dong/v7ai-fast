@@ -1,8 +1,11 @@
 """Service for managing model configurations."""
+import json
+import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.core.database import ModelConfig, SystemSetting
-import json
+
+logger = logging.getLogger("v7ai-fast.model_config")
 
 
 class ModelConfigService:
@@ -50,6 +53,7 @@ class ModelConfigService:
         self.db.add(config)
         self.db.commit()
         self.db.refresh(config)
+        logger.info(f"Model config created: id={config.id}, type={data.get('model_type')}, name={data.get('name')}")
         return config
     
     def update_config(self, config_id: int, data: dict) -> Optional[ModelConfig]:
@@ -83,6 +87,7 @@ class ModelConfigService:
         
         self.db.commit()
         self.db.refresh(config)
+        logger.info(f"Model config updated: id={config_id}")
         return config
     
     def delete_config(self, config_id: int) -> bool:
@@ -93,6 +98,7 @@ class ModelConfigService:
         
         self.db.delete(config)
         self.db.commit()
+        logger.info(f"Model config deleted: id={config_id}")
         return True
     
     def activate_config(self, config_id: int) -> Optional[ModelConfig]:

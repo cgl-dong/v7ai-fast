@@ -1,12 +1,17 @@
 """Document indexing service — splits, embeds, and stores in pgvector.
 
-Powered by LlamaIndex text splitters with multi-strategy support:
-  - sentence  — SentenceSplitter, 按句子边界智能切分 (PDF/DOCX)
-  - paragraph — 按段落切分, 保留篇章结构 (MD/TXT)
-  - token     — Token 级切分, 对齐模型上下文窗口
-  - fixed     — 固定长度切分 (CSV 等)
-  - excel     — Excel 行分组切分
-"""
+Powered by LlamaIndex text splitters + Chinese-aware custom splitters:
+  - recursive  — 多级分隔符递归切分 (新默认, 通用首选)
+  - sentence   — 句子级智能切分 (PDF/DOCX)
+  - paragraph  — 按段落切分, 保留篇章结构 (MD/TXT)
+  - token      — Token 级切分, 对齐模型上下文窗口
+  - fixed      — 固定长度切分 (CSV 等)
+  - excel      — Excel 行分组切分
+  - section    — 面向法规文档, 按章/节/条切分
+  - qa         — 面向问答对, 按问/答边界分组
+  - semantic   — 基于 embedding 相似度的语义切分
+
+Embedding model: BAAI/bge-base-zh-v1.5 (768 dims)."""
 import io
 import json
 import logging
@@ -16,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.core.database import KnowledgeFile, DocumentChunk
 from app.core.settings import settings
 from app.services.knowledge import KnowledgeService
-from app.services.embedding import embed_texts
+from app.services.embedding import embed_texts, embed_query
 from app.services.chunking import split_text, CHUNK_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -44,8 +49,13 @@ class Indexer:
             self.db.commit()
 
             # 1. Load content from MinIO
+            import time
+            t0 = time.time()
             content_bytes, _, _ = self.knowledge_svc.get_file_content(file_id)
             text = self._parse_content(content_bytes, record.filename, record.file_type)
+            parse_time = time.time() - t0
+            logger.info(f"[index] file={record.filename} (id={file_id}, type={record.file_type}, "
+                        f"size={record.file_size}B), parsed {len(text)} chars in {parse_time:.1f}s")
 
             # 1.5 Validate content quality — reject binary garbage
             err = self._validate_content(text, record.filename)
@@ -116,10 +126,12 @@ class Indexer:
     def _parse_content(self, content: bytes, filename: str, file_type: str) -> str:
         """Parse file bytes into plain text."""
         ext = file_type
+        logger.debug(f"[parse] {filename}: type={ext}, bytes={len(content)}")
 
         text = ""
         if ext in ("txt", "md", "csv"):
             text = content.decode("utf-8", errors="replace")
+            logger.debug(f"[parse] {filename}: decoded as text, {len(text)} chars")
 
         elif ext == "pdf":
             from pypdf import PdfReader
@@ -130,33 +142,42 @@ class Indexer:
                 if t:
                     pages.append(t)
             text = "\n\n".join(pages)
+            logger.debug(f"[parse] {filename}: PDF parsed, {len(reader.pages)} pages, {len(text)} chars")
 
         elif ext == "xlsx":
-            from openpyxl import load_workbook
-            wb = load_workbook(io.BytesIO(content), read_only=True)
-            rows = []
-            for sheet_name in wb.sheetnames:
-                sheet = wb[sheet_name]
-                rows.append(f"[Sheet: {sheet_name}]")
-                for row in sheet.iter_rows(values_only=True):
-                    row_str = "\t".join(str(c) if c is not None else "" for c in row)
-                    if row_str.strip():
-                        rows.append(row_str)
-            wb.close()
-            text = "\n".join(rows)
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(io.BytesIO(content), read_only=True)
+                rows = []
+                for sheet_name in wb.sheetnames:
+                    sheet = wb[sheet_name]
+                    rows.append(f"[Sheet: {sheet_name}]")
+                    for row in sheet.iter_rows(values_only=True):
+                        row_str = "\t".join(str(c) if c is not None else "" for c in row)
+                        if row_str.strip():
+                            rows.append(row_str)
+                wb.close()
+                text = "\n".join(rows)
+                logger.debug(f"[parse] {filename}: XLSX parsed, {len(wb.sheetnames)} sheets, {len(rows)} rows, {len(text)} chars")
+            except Exception as e:
+                logger.warning(f"[parse] {filename}: XLSX parse failed: {e}, falling back to text decode")
+                text = content.decode("utf-8", errors="replace")
 
         elif ext == "docx":
             try:
                 from docx import Document
                 doc = Document(io.BytesIO(content))
                 text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                logger.debug(f"[parse] {filename}: DOCX parsed, {len(doc.paragraphs)} paragraphs, {len(text)} chars")
             except ImportError:
+                logger.warning(f"[parse] {filename}: python-docx not installed")
                 text = ""
             except Exception as e:
-                logger.warning(f"DOCX parse failed for {filename}: {e}, trying as text")
+                logger.warning(f"[parse] {filename}: DOCX parse failed: {e}, falling back to text decode")
                 text = content.decode("utf-8", errors="replace")
 
         else:
+            logger.warning(f"[parse] {filename}: unknown type '{ext}', raw decode")
             text = content.decode("utf-8", errors="replace")
 
         # Strip NUL and non-printable control chars that break PostgreSQL
@@ -169,20 +190,22 @@ class Indexer:
         Returns error message string if content is invalid, None if OK.
         """
         if not text or not text.strip():
+            logger.warning(f"[validate] {filename}: empty content")
             return "文档解析后内容为空"
 
         total = len(text)
-        # Count printable ratio: letters, digits, CJK, punctuation, whitespace
         printable = sum(
             1 for c in text
             if c.isprintable() or c in "\n\t\r" or
-               ('\u4e00' <= c <= '\u9fff') or  # CJK
-               ('\u3000' <= c <= '\u303f') or  # CJK punctuation
-               ('\uff00' <= c <= '\uffef')      # Fullwidth forms
+               ('\u4e00' <= c <= '\u9fff') or
+               ('\u3000' <= c <= '\u303f') or
+               ('\uff00' <= c <= '\uffef')
         )
         ratio = printable / total if total > 0 else 0
+        logger.debug(f"[validate] {filename}: printable_ratio={ratio:.1%}, total_chars={total}")
 
         if ratio < 0.5:
+            logger.warning(f"[validate] {filename}: low printable ratio {ratio:.1%}, rejecting")
             return f"文件内容可读率仅 {ratio:.1%}，可能是二进制文件或加密文件"
 
         return None
@@ -191,7 +214,8 @@ class Indexer:
         """Search document chunks by semantic similarity, optionally scoped to a KB."""
         from sqlalchemy import text
 
-        query_embedding = embed_texts([query])[0]
+        logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}")
+        query_embedding = embed_query(query)
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
         if kb_id:
@@ -228,4 +252,11 @@ class Indexer:
                 "similarity": float(r.similarity),
                 "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
             })
+
+        if rows:
+            sims = [r["similarity"] for r in rows]
+            logger.info(f"[search] {len(rows)} results, sims=[{', '.join(f'{s:.3f}' for s in sims)}], "
+                        f"top_sim={sims[0]:.3f}, files={list(set(r['filename'] for r in rows))}")
+        else:
+            logger.warning(f"[search] no results for query: {query[:80]}")
         return rows

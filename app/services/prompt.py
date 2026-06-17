@@ -1,8 +1,11 @@
 """Prompt template management service."""
 import json
+import logging
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.core.database import PromptTemplate
+
+logger = logging.getLogger("v7ai-fast.prompt")
 
 
 class PromptService:

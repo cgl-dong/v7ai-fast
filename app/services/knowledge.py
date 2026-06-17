@@ -1,5 +1,6 @@
 """知识库文件管理服务 - MinIO 对象存储"""
 import io
+import logging
 import uuid
 from typing import Optional, List
 from sqlalchemy.orm import Session
@@ -8,6 +9,8 @@ from minio.error import S3Error
 
 from app.core.database import KnowledgeFile, DocumentChunk
 from app.core.settings import settings
+
+logger = logging.getLogger("v7ai-fast.knowledge")
 
 ALLOWED_EXTENSIONS = {"txt", "pdf", "xlsx", "xls", "docx", "md", "csv"}
 
@@ -47,7 +50,9 @@ class KnowledgeService:
     def get_file_by_id(self, file_id: int) -> Optional[KnowledgeFile]:
         return self.db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
     
-    def save_upload(self, file_content: bytes, original_name: str, uploader: str = "") -> KnowledgeFile:
+    def save_upload(self, file_content: bytes, original_name: str, uploader: str = "",
+                    chunk_strategy: Optional[str] = None, chunk_size: Optional[int] = None,
+                    chunk_overlap: Optional[int] = None) -> KnowledgeFile:
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
         if ext not in ALLOWED_EXTENSIONS:
             raise ValueError(f"不支持的文件类型: .{ext}，支持: {', '.join(ALLOWED_EXTENSIONS)}")
@@ -72,11 +77,15 @@ class KnowledgeService:
             file_size=file_size,
             file_path=stored_name,
             status="uploaded",
-            uploader=uploader or "anonymous"
+            uploader=uploader or "anonymous",
+            chunk_strategy=chunk_strategy,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
         self.db.add(record)
         self.db.commit()
         self.db.refresh(record)
+        logger.info(f"File uploaded: {original_name} ({file_type}, {file_size}B) -> id={record.id}")
         return record
     
     def get_file_content(self, file_id: int) -> tuple:
@@ -109,6 +118,7 @@ class KnowledgeService:
         self.db.query(DocumentChunk).filter(DocumentChunk.file_id == file_id).delete()
         self.db.delete(record)
         self.db.commit()
+        logger.info(f"File deleted: id={file_id}, name={record.filename}")
         return True
     
     def get_file_stats(self) -> dict:

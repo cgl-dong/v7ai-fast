@@ -1,7 +1,10 @@
 """Knowledge Base CRUD service."""
+import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.core.database import KnowledgeBase
+
+logger = logging.getLogger("v7ai-fast.kb")
 
 
 class KnowledgeBaseService:
@@ -22,6 +25,7 @@ class KnowledgeBaseService:
         self.db.add(kb)
         self.db.commit()
         self.db.refresh(kb)
+        logger.info(f"KB created: id={kb.id}, name={name}")
         return kb
 
     def update(self, kb_id: int, data: dict) -> Optional[KnowledgeBase]:
@@ -33,6 +37,7 @@ class KnowledgeBaseService:
                 setattr(kb, k, v)
         self.db.commit()
         self.db.refresh(kb)
+        logger.info(f"KB updated: id={kb_id}, changes={list(data.keys())}")
         return kb
 
     def delete(self, kb_id: int) -> bool:
@@ -41,4 +46,5 @@ class KnowledgeBaseService:
             return False
         self.db.delete(kb)
         self.db.commit()
+        logger.info(f"KB deleted: id={kb_id}")
         return True

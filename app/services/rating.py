@@ -7,11 +7,14 @@ Supports:
 """
 
 import json
+import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.database import TraceRating
+
+logger = logging.getLogger("v7ai-fast.rating")
 
 # Dimension definitions per node type — matching README spec
 NODE_DIMENSIONS = {
@@ -92,6 +95,7 @@ class RatingService:
                 existing.dimension_reasons = reasons_json
             self.db.commit()
             self.db.refresh(existing)
+            logger.info(f"Rating updated: {target_type}/{target_id} by {scorer}, overall={overall}")
             return existing
 
         record = TraceRating(
@@ -110,6 +114,7 @@ class RatingService:
         self.db.add(record)
         self.db.commit()
         self.db.refresh(record)
+        logger.info(f"Rating created: {target_type}/{target_id} by {scorer}, overall={overall}")
         return record
 
     def query_ratings(

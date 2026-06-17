@@ -1,4 +1,5 @@
 """User authentication service."""
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -7,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.core.database import User, get_db
+
+logger = logging.getLogger("v7ai-fast.auth")
 
 
 class AuthService:
@@ -45,6 +48,7 @@ class AuthService:
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)
+        logger.info(f"User registered: {username}")
         return user
 
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -62,5 +66,7 @@ class AuthService:
         """Authenticate user."""
         user = self.get_user(username)
         if not user or not self.verify_password(password, user.hashed_password):
+            logger.warning(f"Auth failed: {username}")
             return None
+        logger.info(f"User authenticated: {username}")
         return user

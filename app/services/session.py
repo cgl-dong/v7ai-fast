@@ -1,10 +1,13 @@
 """Service for managing chat sessions and messages."""
+import logging
 import uuid
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List
 
 from app.core.database import ChatSession, ChatMessage, EventLog
+
+logger = logging.getLogger("v7ai-fast.session")
 
 
 class SessionService:

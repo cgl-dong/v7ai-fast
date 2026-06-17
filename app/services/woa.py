@@ -2,10 +2,13 @@
 import httpx
 import hashlib
 import hmac
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
 from app.core.settings import settings
+
+logger = logging.getLogger("v7ai-fast.woa")
 
 
 class WoaService:

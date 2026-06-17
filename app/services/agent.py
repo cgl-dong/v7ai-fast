@@ -81,49 +81,70 @@ class RAGAgent:
         return workflow.compile()
 
     async def _classify_node(self, state: RAGState) -> dict:
+        question = state["question"]
+        logger.info(f"[classify] question: {question[:100]}...")
+
         prompt = f"""判断用户问题是否需要从企业知识库检索。
 
 需要知识库的情况：询问数据、报表、文档内容、内部规章、项目信息
 不需要知识库的情况：闲聊问候、通用知识、代码编写、翻译、计算
 
-问题: {state['question']}
+问题: {question}
 
 输出JSON: {{"need_kb": true/false, "reason": "理由"}}"""
 
         with self.tracer.trace("classify", self.session_id, "agent_node", self.model_name) as ctx:
-            ctx.input = state["question"]
+            ctx.input = question
             try:
+                logger.debug(f"[classify] calling LLM (model={self.model_name})")
                 answer = await self.ai.call_model(prompt)
                 json_str = answer.strip()
                 if "```" in json_str:
                     json_str = json_str.split("```")[1].replace("json", "", 1)
                 result = json.loads(json_str)
                 needs_kb = result.get("need_kb", False)
+                reason = result.get("reason", "")
                 ctx.output = f"needs_kb={needs_kb}"
-                ctx.metadata["reason"] = result.get("reason", "")
+                ctx.metadata["reason"] = reason
+                logger.info(f"[classify] result: needs_kb={needs_kb}, reason={reason}")
                 return {"needs_kb": needs_kb}
             except Exception as e:
-                logger.warning(f"Classify failed: {e}")
+                logger.warning(f"[classify] failed: {e}, defaulting to needs_kb=True")
                 return {"needs_kb": True}
 
     async def _retrieve_node(self, state: RAGState) -> dict:
         if not state.get("needs_kb"):
+            logger.info(f"[retrieve] skipped (needs_kb=False)")
             return {"kb_results": [], "context": ""}
 
         kb_id = state.get("kb_id")
+        question = state["question"]
+        logger.info(f"[retrieve] searching (kb_id={kb_id}, top_k=5): {question[:80]}...")
+
         with self.tracer.trace("retrieve", self.session_id, "agent_node", "",
                                {"needs_kb": state.get("needs_kb"), "kb_id": kb_id}) as ctx:
-            ctx.input = state["question"][:200]
+            ctx.input = question[:200]
             try:
                 indexer = Indexer(self.db)
-                results = indexer.search_chunks(state["question"], top_k=5, kb_id=kb_id)
+                results = indexer.search_chunks(question, top_k=5, kb_id=kb_id)
                 context = _format_context(results)
                 ctx.output = f"found {len(results)} chunks"
                 ctx.metadata["chunk_count"] = len(results)
-                logger.info(f"Retrieved {len(results)} chunks (kb_id={kb_id})")
+
+                # Log per-chunk details
+                for r in results:
+                    logger.info(f"[retrieve] chunk {r['chunk_index']} from {r['filename']} "
+                                f"(type={r['file_type']}, sim={r['similarity']:.3f}): {r['content'][:80]}...")
+
+                if results:
+                    top_sim = results[0]["similarity"]
+                    avg_sim = sum(r["similarity"] for r in results) / len(results)
+                    logger.info(f"[retrieve] {len(results)} results, top_sim={top_sim:.3f}, avg_sim={avg_sim:.3f}")
+                else:
+                    logger.warning(f"[retrieve] no results found for: {question[:80]}")
                 return {"kb_results": results, "context": context}
             except Exception as e:
-                logger.error(f"Retrieve error: {e}")
+                logger.error(f"[retrieve] error: {e}")
                 return {"kb_results": [], "context": "", "error": str(e)}
 
     async def _generate_node(self, state: RAGState) -> dict:
@@ -131,6 +152,9 @@ class RAGAgent:
         context = state.get("context", "")
 
         has_context = bool(context)
+        node_name = "generate_with_docs" if has_context else "generate_no_docs"
+        self._last_node_name = node_name
+
         if has_context:
             prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
 
@@ -140,21 +164,23 @@ class RAGAgent:
 用户问题: {question}
 
 要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。"""
+            logger.info(f"[{node_name}] RAG mode, context={len(context)} chars, prompt={len(prompt)} chars")
         else:
-            prompt = f"问题: {question}\n\n用中文简洁回答。"
+            prompt = f"問題: {question}\n\n用中文简洁回答。"
+            logger.info(f"[{node_name}] direct mode, prompt={len(prompt)} chars")
 
-        node_name = "generate_with_docs" if has_context else "generate_no_docs"
-        self._last_node_name = node_name
         with self.tracer.trace(node_name, self.session_id, "agent_node", self.model_name,
                                {"has_context": has_context}) as ctx:
-            self._last_trace_id = ctx.trace_id  # Capture for judge
+            self._last_trace_id = ctx.trace_id
             ctx.input = question[:200]
             try:
+                logger.debug(f"[{node_name}] calling LLM (model={self.model_name})")
                 answer = await self.ai.call_model(prompt)
                 ctx.output = answer[:500]
+                logger.info(f"[{node_name}] answer generated: {len(answer)} chars")
                 return {"answer": answer}
             except Exception as e:
-                logger.error(f"Generate error: {e}")
+                logger.error(f"[{node_name}] error: {e}")
                 return {"answer": f"生成回答出错: {e}", "error": str(e)}
 
     async def run(self, message: str, chat_history: List[dict] = None, use_kb: bool = True, kb_id: int = None) -> str:
@@ -166,8 +192,14 @@ class RAGAgent:
             use_kb: If False, skip retrieval entirely and answer directly
             kb_id: Optional knowledge base ID to scope retrieval
         """
+        import time
+        t0 = time.time()
+        logger.info(f"[agent] start: use_kb={use_kb}, kb_id={kb_id}, session={self.session_id}, "
+                    f"question={message[:80]}...")
+
         # Fast path: user wants direct answer without RAG
         if not use_kb:
+            logger.info(f"[agent] direct mode (use_kb=False), model={self.model_name}")
             with self.tracer.trace("generate_direct", self.session_id, "agent_node", self.model_name,
                                    {"use_kb": False}) as ctx:
                 self._last_trace_id = ctx.trace_id
@@ -176,13 +208,16 @@ class RAGAgent:
                 try:
                     answer = await self.ai.call_model(message)
                     ctx.output = answer[:500]
-                    # Fire-and-forget AI judge evaluation
                     _fire_judge(self._last_trace_id, self.session_id, message, answer, "", self._last_node_name)
+                    elapsed = time.time() - t0
+                    logger.info(f"[agent] direct done: {len(answer)} chars, elapsed={elapsed:.1f}s")
                     return answer
                 except Exception as e:
-                    logger.error(f"Direct answer error: {e}")
+                    elapsed = time.time() - t0
+                    logger.error(f"[agent] direct error: {e}, elapsed={elapsed:.1f}s")
                     return f"生成回答出错: {e}"
 
+        logger.info(f"[agent] RAG mode, model={self.model_name}")
         state: RAGState = {
             "question": message,
             "messages": chat_history or [],
@@ -197,11 +232,15 @@ class RAGAgent:
             result = await self.graph.ainvoke(state)
             answer = result.get("answer", "未能生成回答")
             context = result.get("context", "")
-            # Fire-and-forget AI judge evaluation
+            elapsed = time.time() - t0
+            needs_kb = result.get("needs_kb", False)
+            logger.info(f"[agent] RAG done: needs_kb={needs_kb}, context={len(context)} chars, "
+                        f"answer={len(answer)} chars, elapsed={elapsed:.1f}s")
             _fire_judge(self._last_trace_id, self.session_id, message, answer, context, self._last_node_name)
             return answer
         except Exception as e:
-            logger.error(f"Agent error: {e}")
+            elapsed = time.time() - t0
+            logger.error(f"[agent] RAG error: {e}, elapsed={elapsed:.1f}s, falling back")
             with self.tracer.trace("fallback", self.session_id, "agent_node", self.model_name) as ctx:
                 self._last_trace_id = ctx.trace_id
                 self._last_node_name = "fallback"
@@ -209,10 +248,14 @@ class RAGAgent:
                 try:
                     answer = await self.ai.call_model(message)
                     ctx.output = answer[:500]
+                    elapsed2 = time.time() - t0
+                    logger.info(f"[agent] fallback done: {len(answer)} chars, total_elapsed={elapsed2:.1f}s")
                     _fire_judge(self._last_trace_id, self.session_id, message, answer, "", self._last_node_name)
                     return answer
                 except Exception as fe:
                     ctx.metadata["fallback_error"] = str(fe)
+                    elapsed2 = time.time() - t0
+                    logger.error(f"[agent] fallback failed: {fe}, total_elapsed={elapsed2:.1f}s")
                     return f"处理失败: {e}"
 
 
