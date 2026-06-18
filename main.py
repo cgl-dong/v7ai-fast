@@ -1,5 +1,6 @@
 """v7ai-fast - FastAPI based WOA smart assistant backend."""
 import os
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -36,6 +37,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(woa_router, prefix="")
 app.include_router(web_router, prefix="")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Preload heavy models at startup to avoid first-request latency."""
+    async def _preload():
+        try:
+            from app.services.embedding import get_embedding_model
+            model = await asyncio.to_thread(get_embedding_model)
+            logger.info(f"Embedding model preloaded: dim={model.get_sentence_embedding_dimension()}")
+        except Exception as e:
+            logger.warning(f"Failed to preload embedding model (will lazy-load on first use): {e}")
+    asyncio.create_task(_preload())
 
 
 @app.get("/")

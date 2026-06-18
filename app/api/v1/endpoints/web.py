@@ -1000,9 +1000,11 @@ async def knowledge_page(
 </div>
 <script>
 const API = "/api/v1/knowledge";
+function authHeaders(){var h={};var t=document.cookie.match(/(^| )access_token=([^;]+)/);if(t)h["Authorization"]="Bearer "+t[2];return h;}
+async function apiFetch(url,options){options=options||{};options.headers=Object.assign(options.headers||{},authHeaders());var r=await fetch(url,options);if(r.status===401){alert("登录已过期，请重新登录");window.location.href="/login";throw new Error("Unauthorized");}return r;}
 async function loadStats(){
     try{
-        const r = await fetch(API+"/files/stats");
+        const r = await apiFetch(API+"/files/stats");
         const d = await r.json();
         document.getElementById("statTotal").textContent = d.total || 0;
         const bt = d.by_type || {};
@@ -1017,7 +1019,7 @@ async function loadFiles(){
     const el = document.getElementById("fileList");
     el.innerHTML='<div class="loading">加载中...</div>';
     try{
-        const r = await fetch(API+"/files");
+        const r = await apiFetch(API+"/files");
         const d = await r.json();
         if(!d.files||d.files.length===0){el.innerHTML='<div class="empty-state">暂无文件，请上传</div>';return;}
         let h = '<table class="file-table"><thead><tr><th>文件名</th><th>类型</th><th>大小</th><th>知识库</th><th>状态</th><th>分片</th><th>上传时间</th><th>操作</th></tr></thead><tbody>';
@@ -1038,7 +1040,7 @@ async function handleUpload(file){
     st.className="upload-status";st.textContent="上传中...";st.style.display="block";
     var fd = new FormData();fd.append("file",file);
     try{
-        var r = await fetch(API+"/upload",{method:"POST",body:fd});
+        var r = await apiFetch(API+"/upload",{method:"POST",body:fd});
         var d = await r.json();
         if(r.ok){st.className="upload-status success";st.textContent=d.message+" - "+d.file.filename;loadFiles();loadStats();}
         else{st.className="upload-status error";st.textContent=d.detail||"上传失败";}
@@ -1046,7 +1048,7 @@ async function handleUpload(file){
 }
 async function downloadFile(id,name){
     try{
-        var r = await fetch(API+"/download/"+id);
+        var r = await apiFetch(API+"/download/"+id);
         if(!r.ok){alert("下载失败");return;}
         var b = await r.blob();
         var u = URL.createObjectURL(b);
@@ -1059,19 +1061,22 @@ async function indexFile(id){
     var btn = event.target;
     btn.disabled = true; btn.textContent = "已提交";
     try{
-        var r = await fetch(API+"/files/"+id+"/index",{method:"POST"});
+        var r = await apiFetch(API+"/files/"+id+"/index",{method:"POST"});
         if(!r.ok){ var d = await r.json(); alert("提交失败: "+(d.detail||"未知错误")); btn.disabled=false; btn.textContent="🔍 索引"; }
     } catch(e) { alert("提交失败: "+e.message); btn.disabled=false; btn.textContent="🔍 索引"; }
-    // Poll status every 3s, refresh when done
+    // Poll status every 3s, refresh when done (max 60 attempts = 3min)
+    var attempts = 0;
     var poll = setInterval(async function(){
         try{
-            var rr = await fetch(API+"/files/"+id);
+            attempts++;
+            var rr = await apiFetch(API+"/files/"+id);
             var dd = await rr.json();
-            if(dd.status === "indexed" || dd.status === "error"){
+            if(dd.status === "indexed" || dd.status === "error" || attempts >= 60){
                 clearInterval(poll);
                 loadFiles(); loadStats();
+                if(attempts >= 60) alert("索引超时，请刷新页面查看最新状态");
             }
-        } catch(e) {}
+        } catch(e) { clearInterval(poll); }
     }, 3000);
 }
 var _indexAllRunning = false;
@@ -1081,7 +1086,7 @@ async function indexAllFiles(){
     _indexAllRunning = true;
     var btn = event.target; btn.disabled = true; btn.textContent = "索引中...";
     try{
-        var r = await fetch(API+"/files/index-all",{method:"POST"});
+        var r = await apiFetch(API+"/files/index-all",{method:"POST"});
         var d = await r.json();
         alert(d.message);
         loadFiles(); loadStats();
@@ -1092,7 +1097,7 @@ async function indexAllFiles(){
 async function deleteFile(id){
     if(!confirm("确定要删除这个文件吗？"))return;
     try{
-        var r = await fetch(API+"/files/"+id,{method:"DELETE"});
+        var r = await apiFetch(API+"/files/"+id,{method:"DELETE"});
         if(r.ok){loadFiles();loadStats();}else{alert("删除失败");}
     }catch(e){alert("删除失败: "+e.message);}
 }
@@ -1106,7 +1111,7 @@ async function previewFile(fileId,filename){
     contentEl.textContent="加载中...";
     metaEl.textContent="";
     try{
-        var r=await fetch(API+"/files/"+fileId+"/preview");
+        var r=await apiFetch(API+"/files/"+fileId+"/preview");
         if(!r.ok){contentEl.textContent="加载失败: "+r.status;return;}
         var d=await r.json();
         metaEl.textContent=he(d.filename)+" ("+d.file_type.toUpperCase()+", "+d.file_size+"B, "+d.content_length+"字"+(d.truncated?" 已截断":"")+")";
@@ -1123,7 +1128,7 @@ function logout(){fetch('/api/v1/auth/logout',{method:'POST'}).catch(function(){
 var kbMoveOptions = "";
 async function loadKBList(){
     try{
-        var r=await fetch(API+"/kb/with-counts");var d=await r.json();
+        var r=await apiFetch(API+"/kb/with-counts");var d=await r.json();
         var el=document.getElementById("kbList");el.innerHTML="";
         kbMoveOptions = "";
         d.knowledge_bases.forEach(function(k){
@@ -1139,28 +1144,28 @@ async function createKB(){
     var name=document.getElementById("kbNameInput").value.trim();
     if(!name){alert("请输入名称");return;}
     try{
-        var r=await fetch(API+"/kb",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name})});
+        var r=await apiFetch(API+"/kb",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:name})});
         if(r.ok){document.getElementById("kbNameInput").value="";loadKBList();loadFiles();}
         else{alert("创建失败");}
     }catch(e){alert("创建失败: "+e.message)}
 }
 async function deactivateKB(id){
     if(!confirm("停用后该知识库不会显示在聊天选择中，已有文档绑定保留。继续？"))return;
-    try{await fetch(API+"/kb/"+id,{method:"DELETE"});loadKBList();loadFiles();}
+    try{await apiFetch(API+"/kb/"+id,{method:"DELETE"});loadKBList();loadFiles();}
     catch(e){alert("操作失败: "+e.message)}
 }
 async function activateKB(id){
-    try{await fetch(API+"/kb/"+id+"/activate",{method:"PUT"});loadKBList();loadFiles();}
+    try{await apiFetch(API+"/kb/"+id+"/activate",{method:"PUT"});loadKBList();loadFiles();}
     catch(e){alert("启用失败: "+e.message)}
 }
 async function hardDeleteKB(id,name){
     if(!confirm("彻底删除知识库【"+name+"】？关联文档将变为未分类。此操作不可恢复！"))return;
-    try{await fetch(API+"/kb/"+id+"/hard",{method:"DELETE"});loadKBList();loadFiles();}
+    try{await apiFetch(API+"/kb/"+id+"/hard",{method:"DELETE"});loadKBList();loadFiles();}
     catch(e){alert("删除失败: "+e.message)}
 }
 async function moveFileToKb(fileId,kbId){
     try{
-        var r=await fetch(API+"/files/"+fileId+"/move",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({kb_id:kbId})});
+        var r=await apiFetch(API+"/files/"+fileId+"/move",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({kb_id:kbId})});
         if(r.ok)loadFiles();else alert("移动失败");
     }catch(e){alert("移动失败: "+e.message)}
 }
