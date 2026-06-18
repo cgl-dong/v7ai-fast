@@ -2,6 +2,7 @@
 import logging
 import uuid
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from datetime import datetime
 from typing import Optional, List
 
@@ -16,22 +17,31 @@ class SessionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_by_chat_id(self, chat_id: str) -> Optional[ChatSession]:
-        """Get a session by chat_id."""
-        return self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
+    def get_by_chat_id(self, chat_id: str, user_id: Optional[str] = None) -> Optional[ChatSession]:
+        """Get a session by chat_id. If user_id provided, only return if user owns it."""
+        q = self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id)
+        if user_id is not None:
+            q = q.filter(or_(ChatSession.user_id == user_id, ChatSession.user_id.is_(None), ChatSession.user_id == "anonymous"))
+        return q.first()
     
-    def get_or_create_session(self, chat_id: str, user_id: str = None) -> ChatSession:
-        """Get or create a chat session."""
+    def get_or_create_session(self, chat_id: str, user_id: str = None, strict: bool = False) -> ChatSession:
+        """Get or create a chat session.
+        
+        If strict=True and session exists with a different owner, returns None.
+        """
         session = self.db.query(ChatSession).filter(ChatSession.chat_id == chat_id).first()
-        if not session:
-            session = ChatSession(
-                chat_id=chat_id,
-                user_id=user_id,
-                created_at=datetime.now()
-            )
-            self.db.add(session)
-            self.db.commit()
-            self.db.refresh(session)
+        if session:
+            if strict and user_id and session.user_id and session.user_id != "anonymous" and session.user_id != user_id:
+                return None  # Ownership mismatch
+            return session
+        session = ChatSession(
+            chat_id=chat_id,
+            user_id=user_id,
+            created_at=datetime.now()
+        )
+        self.db.add(session)
+        self.db.commit()
+        self.db.refresh(session)
         return session
     
     def add_message(self, session_id: int, message_id: str, role: str, content: str):
@@ -85,12 +95,12 @@ class SessionService:
             .limit(limit)\
             .all()
     
-    def get_sessions(self, limit: int = 20) -> List[ChatSession]:
-        """Get recent sessions."""
-        return self.db.query(ChatSession)\
-            .order_by(ChatSession.created_at.desc())\
-            .limit(limit)\
-            .all()
+    def get_sessions(self, limit: int = 20, user_id: Optional[str] = None) -> List[ChatSession]:
+        """Get recent sessions, optionally filtered by user."""
+        q = self.db.query(ChatSession)
+        if user_id is not None:
+            q = q.filter(or_(ChatSession.user_id == user_id, ChatSession.user_id.is_(None), ChatSession.user_id == "anonymous"))
+        return q.order_by(ChatSession.created_at.desc()).limit(limit).all()
     
     def get_sessions_with_user(self, limit: int = 20):
         """Get recent sessions with user information."""

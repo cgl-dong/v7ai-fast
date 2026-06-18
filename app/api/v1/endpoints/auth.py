@@ -1,12 +1,13 @@
 """Authentication endpoints."""
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
 from app.core.database import get_db, User
 from app.core.settings import settings
+from app.core.logging import logger
 from app.services.auth import AuthService
 
 router = APIRouter()
@@ -81,3 +82,12 @@ async def register_user(
 async def read_users_me(current_user: User = Depends(get_current_user)):
     """Get current user info."""
     return {"username": current_user.username, "email": current_user.email, "id": current_user.id}
+
+
+@router.post("/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    """Logout — server-side clear cookie."""
+    logger.info(f"User logged out: {current_user.username}")
+    response = Response(content='{"message":"已登出"}', media_type="application/json")
+    response.delete_cookie("access_token", path="/")
+    return response

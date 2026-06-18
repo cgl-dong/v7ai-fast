@@ -210,11 +210,11 @@ class Indexer:
 
         return None
 
-    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None) -> List[dict]:
-        """Search document chunks by semantic similarity, optionally scoped to a KB."""
+    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Search document chunks by semantic similarity, optionally scoped to a KB and user."""
         from sqlalchemy import text
 
-        logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}")
+        logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}, user_id={user_id}")
         query_embedding = embed_query(query)
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
@@ -230,6 +230,18 @@ class Indexer:
                 LIMIT :limit
             """)
             result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "kb_id": kb_id})
+        elif user_id is not None:
+            sql = text("""
+                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                       kf.filename, kf.file_type,
+                       1 - (dc.embedding <=> :embedding) AS similarity
+                FROM document_chunks dc
+                JOIN knowledge_files kf ON dc.file_id = kf.id
+                WHERE kf.user_id = :user_id OR kf.user_id IS NULL
+                ORDER BY dc.embedding <=> :embedding
+                LIMIT :limit
+            """)
+            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "user_id": user_id})
         else:
             sql = text("""
                 SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,

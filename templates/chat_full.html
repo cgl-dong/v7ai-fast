@@ -438,8 +438,10 @@
         }
         
         function logout() {
+            fetch('/api/v1/auth/logout', { method: 'POST', headers: authHeaders() }).catch(function(){});
             localStorage.removeItem('token');
             localStorage.removeItem('username');
+            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             window.location.href = '/login';
         }
         

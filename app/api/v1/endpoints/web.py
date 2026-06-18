@@ -45,9 +45,9 @@ async def get_optional_user(request: Request, db: Session = Depends(get_db)) -> 
     return None
 
 
-def _get_agent(db: Session, session_id: str = "") -> RAGAgent:
+def _get_agent(db: Session, session_id: str = "", user_id: int = None) -> RAGAgent:
     """Create RAGAgent with database session for retrieval + tracing."""
-    return RAGAgent(db, session_id=session_id)
+    return RAGAgent(db, session_id=session_id, user_id=user_id)
 
 ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -149,6 +149,7 @@ ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
             <a href="/knowledge">Knowledge</a>
             <a href="/observability">Observability</a>
             <a href="/admin">Admin</a>
+            <a href="#" onclick="logout()">登出</a>
         </div>
     </div>
     <div class="container">
@@ -386,212 +387,125 @@ ADMIN_HTML_TEMPLATE = """<!DOCTYPE html>
             }}
         }});
         loadModels();
+        function logout(){{fetch('/api/v1/auth/logout',{{method:'POST'}}).catch(function(){{}});localStorage.removeItem('token');localStorage.removeItem('username');document.cookie='access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';window.location.href='/login'}}
     </script>
 </body>
 </html>"""
 
 
-@router.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """Login page."""
-    html_content = """
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>v7ai-fast - Login</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-container { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 400px; }
-        .login-container h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 28px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
-        .form-group input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; transition: border-color 0.3s; }
-        .form-group input:focus { border-color: #667eea; }
-        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
-        .toggle-form { text-align: center; margin-top: 20px; color: #666; }
-        .toggle-form a { color: #667eea; text-decoration: none; }
-        .error-message { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; }
-        .success-message { background: #d4edda; color: #155724; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: none; }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>🤖 v7ai-fast</h1>
-        <div class="error-message" id="error-message"></div>
-        <div class="success-message" id="success-message"></div>
-        
-        <form id="login-form">
-            <div class="form-group">
-                <label>用户名</label>
-                <input type="text" id="username" placeholder="请输入用户名" required>
-            </div>
-            <div class="form-group">
-                <label>密码</label>
-                <input type="password" id="password" placeholder="请输入密码" required>
-            </div>
-            <button type="submit" class="btn">登录</button>
-        </form>
-        
-        <div class="toggle-form">
-            还没有账号？<a href="#" onclick="showRegister()">立即注册</a>
-        </div>
-    </div>
-
-    <div class="login-container" id="register-container" style="display: none;">
-        <h1>🤖 v7ai-fast</h1>
-        <div class="error-message" id="register-error"></div>
-        <div class="success-message" id="register-success"></div>
-        
-        <form id="register-form">
-            <div class="form-group">
-                <label>用户名</label>
-                <input type="text" id="reg-username" placeholder="请输入用户名" required>
-            </div>
-            <div class="form-group">
-                <label>邮箱（可选）</label>
-                <input type="email" id="reg-email" placeholder="请输入邮箱">
-            </div>
-            <div class="form-group">
-                <label>密码</label>
-                <input type="password" id="reg-password" placeholder="请输入密码" required>
-            </div>
-            <button type="submit" class="btn">注册</button>
-        </form>
-        
-        <div class="toggle-form">
-            已有账号？<a href="#" onclick="showLogin()">立即登录</a>
-        </div>
-    </div>
-
-    <script>
-        function showRegister() {
-            document.querySelector('.login-container').style.display = 'none';
-            document.getElementById('register-container').style.display = 'block';
-        }
-        
-        function showLogin() {
-            document.getElementById('register-container').style.display = 'none';
-            document.querySelector('.login-container').style.display = 'block';
-        }
-        
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            const formData = new FormData();
-            formData.append('username', username);
-            formData.append('password', password);
-            
-            const response = await fetch('/api/v1/auth/token', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('token', data.access_token);
-                localStorage.setItem('username', data.username);
-                window.location.href = '/chat';
-            } else {
-                document.getElementById('error-message').textContent = '登录失败：用户名或密码错误';
-                document.getElementById('error-message').style.display = 'block';
-            }
-        });
-        
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('reg-username').value;
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            
-            try {
-                const response = await fetch(`/api/v1/auth/register?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    document.getElementById('register-success').textContent = '注册成功！请登录';
-                    document.getElementById('register-success').style.display = 'block';
-                    setTimeout(() => showLogin(), 2000);
-                } else {
-                    const data = await response.json();
-                    const errorMsg = data.detail || '注册失败，请重试';
-                    document.getElementById('register-error').textContent = '注册失败：' + errorMsg;
-                    document.getElementById('register-error').style.display = 'block';
-                }
-            } catch (error) {
-                document.getElementById('register-error').textContent = '注册失败：网络错误，请重试';
-                document.getElementById('register-error').style.display = 'block';
-            }
-        });
-    </script>
-</body>
-</html>
-    """
-    return HTMLResponse(content=html_content)
-
-
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    """Login page."""
+    """登录/注册页面."""
     return HTMLResponse(content=r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>登录 - v7ai-fast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v7ai-fast</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
-        .card{background:#fff;border-radius:12px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-        .card h1{text-align:center;margin-bottom:24px;color:#333}
-        .card input{width:100%;padding:12px 16px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none}
+        .card{background:#fff;border-radius:16px;padding:40px;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .card h1{text-align:center;margin-bottom:24px;color:#333;font-size:28px}
+        .card input{width:100%;padding:12px 16px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;transition:border-color .3s}
         .card input:focus{border-color:#667eea}
-        .card button{width:100%;padding:12px;background:#667eea;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:8px}
-        .card button:hover{background:#5a6fd6}
-        .error{color:#ff4d4f;font-size:13px;margin-bottom:8px;display:none}
-        .link{text-align:center;margin-top:16px;font-size:13px}
-        .link a{color:#667eea;text-decoration:none}
+        .card button{width:100%;padding:12px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:8px;transition:transform .2s,box-shadow .2s}
+        .card button:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(102,126,234,.4)}
+        .msg{padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
+        .msg.error{display:block;background:#f8d7da;color:#721c24}
+        .msg.success{display:block;background:#d4edda;color:#155724}
+        .toggle{text-align:center;margin-top:16px;font-size:13px;color:#666}
+        .toggle a{color:#667eea;text-decoration:none;font-weight:500}
+        .toggle a:hover{text-decoration:underline}
+        #registerPanel{display:none}
     </style>
 </head>
 <body>
-<div class="card">
-    <h1>v7ai-fast 登录</h1>
-    <div class="error" id="error">用户名或密码错误</div>
-    <input type="text" id="username" placeholder="用户名" autofocus>
-    <input type="password" id="password" placeholder="密码">
-    <button onclick="login()">登 录</button>
+<!-- 登录面板 -->
+<div class="card" id="loginPanel">
+    <h1>&#x1F916; v7ai-fast</h1>
+    <div class="msg error" id="loginMsg"></div>
+    <input type="text" id="loginUser" placeholder="用户名" autofocus>
+    <input type="password" id="loginPass" placeholder="密码">
+    <button onclick="doLogin()">登 录</button>
+    <div class="toggle">还没有账号？<a href="#" onclick="showRegister()">立即注册</a></div>
 </div>
+
+<!-- 注册面板 -->
+<div class="card" id="registerPanel">
+    <h1>&#x1F916; v7ai-fast</h1>
+    <div class="msg error" id="regError"></div>
+    <div class="msg success" id="regSuccess"></div>
+    <input type="text" id="regUser" placeholder="用户名">
+    <input type="email" id="regEmail" placeholder="邮箱（可选）">
+    <input type="password" id="regPass" placeholder="密码">
+    <button onclick="doRegister()">注 册</button>
+    <div class="toggle">已有账号？<a href="#" onclick="showLogin()">立即登录</a></div>
+</div>
+
 <script>
-async function login(){
-    var u=document.getElementById("username").value.trim();
-    var p=document.getElementById("password").value.trim();
+function showRegister(){document.getElementById("loginPanel").style.display="none";document.getElementById("registerPanel").style.display="block";document.getElementById("regUser").focus()}
+function showLogin(){document.getElementById("registerPanel").style.display="none";document.getElementById("loginPanel").style.display="block";document.getElementById("loginUser").focus()}
+
+async function doLogin(){
+    var u=document.getElementById("loginUser").value.trim();
+    var p=document.getElementById("loginPass").value.trim();
     if(!u||!p)return;
+    var el=document.getElementById("loginMsg");
     var form=new FormData();form.append("username",u);form.append("password",p);
     try{
         var r=await fetch("/api/v1/auth/token",{method:"POST",body:form});
-        if(!r.ok){document.getElementById("error").style.display="block";return}
+        if(!r.ok){el.textContent="用户名或密码错误";el.className="msg error";return}
         var d=await r.json();
+        // Store token in both localStorage and cookie (for API auth + page auth)
         localStorage.setItem("token",d.access_token);
         localStorage.setItem("username",d.username);
+        document.cookie="access_token="+d.access_token+";path=/;max-age=86400;SameSite=Lax";
         window.location.href="/chat";
-    }catch(e){document.getElementById("error").style.display="block"}
+    }catch(e){el.textContent="网络错误，请重试";el.className="msg error"}
 }
-document.getElementById("password").addEventListener("keypress",function(e){if(e.key==="Enter")login()});
+
+async function doRegister(){
+    var u=document.getElementById("regUser").value.trim();
+    var e=document.getElementById("regEmail").value.trim();
+    var p=document.getElementById("regPass").value.trim();
+    if(!u||!p)return;
+    var elE=document.getElementById("regError");
+    var elS=document.getElementById("regSuccess");
+    elE.className="msg";elS.className="msg";
+    try{
+        var params="username="+encodeURIComponent(u)+"&password="+encodeURIComponent(p);
+        if(e)params+="&email="+encodeURIComponent(e);
+        var r=await fetch("/api/v1/auth/register?"+params,{method:"POST"});
+        if(r.ok){
+            elS.textContent="注册成功！正在跳转登录...";elS.className="msg success";
+            setTimeout(function(){document.getElementById("regUser").value="";document.getElementById("regPass").value="";document.getElementById("regEmail").value="";showLogin();document.getElementById("loginUser").value=u},1500);
+        }else{
+            var data=await r.json();
+            elE.textContent=(data.detail||"注册失败")+"";elE.className="msg error";
+        }
+    }catch(err){elE.textContent="网络错误，请重试";elE.className="msg error"}
+}
+
+document.getElementById("loginPass").addEventListener("keypress",function(e){if(e.key==="Enter")doLogin()});
+document.getElementById("regPass").addEventListener("keypress",function(e){if(e.key==="Enter")doRegister()});
 </script>
 </body>
 </html>""")
 
 
 @router.get("/chat", response_class=HTMLResponse)
-async def chat_page(request: Request, db: Session = Depends(get_db)):
-    """Chat interface page with session list."""
+async def chat_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Chat interface page — requires login."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
     session_service = SessionService(db)
-    sessions = session_service.get_sessions(limit=50)
+    sessions = session_service.get_sessions(limit=50, user_id=str(user.id))
     
     sessions_html = ""
     for s in sessions:
@@ -612,20 +526,12 @@ async def chat_page(request: Request, db: Session = Depends(get_db)):
 async def get_sessions(
     request: Request,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: User = Depends(get_current_user),
 ):
-    """Get chat sessions for current user (or all if anonymous)."""
-    if user:
-        sessions = (
-            db.query(ChatSession)
-            .filter(ChatSession.user_id == str(user.id))
-            .order_by(ChatSession.created_at.desc())
-            .limit(50)
-            .all()
-        )
-    else:
-        session_service = SessionService(db)
-        sessions = session_service.get_sessions(limit=50)
+    """Get chat sessions for current user."""
+    session_service = SessionService(db)
+    uid = str(user.id)
+    sessions = session_service.get_sessions(limit=50, user_id=uid)
 
     result = []
     for s in sessions:
@@ -648,39 +554,62 @@ async def get_sessions(
 
 
 @router.put("/api/sessions/{chat_id}/title")
-async def rename_session(chat_id: str, request: Request, db: Session = Depends(get_db)):
-    """Rename a chat session title."""
+async def rename_session(
+    chat_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Rename a chat session title (owner only)."""
     data = await request.json()
     title = (data.get("title", "") or "").strip()[:200]
     session_service = SessionService(db)
-    session = session_service.get_by_chat_id(chat_id)
+    uid = str(user.id)
+    session = session_service.get_by_chat_id(chat_id, user_id=uid)
     if not session:
-        raise HTTPException(status_code=404, detail="会话不存在")
+        raise HTTPException(status_code=404, detail="会话不存在或无权限")
+    if session.user_id and session.user_id != "anonymous" and session.user_id != uid:
+        raise HTTPException(status_code=403, detail="无权操作此会话")
     session.title = title
     db.commit()
-    logger.info(f"Session renamed: {chat_id[:12]}... -> '{title}'")
+    logger.info(f"Session renamed: {chat_id[:12]}... -> '{title}' by user={uid}")
     return {"message": "已更新", "title": title}
 
 
 @router.delete("/api/sessions/{chat_id}")
-async def delete_session(chat_id: str, db: Session = Depends(get_db)):
-    """Delete a chat session and its messages."""
+async def delete_session(
+    chat_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Delete a chat session and its messages (owner only)."""
     session_service = SessionService(db)
-    session = session_service.get_by_chat_id(chat_id)
+    uid = str(user.id)
+    session = session_service.get_by_chat_id(chat_id, user_id=uid)
     if not session:
-        raise HTTPException(status_code=404, detail="会话不存在")
+        raise HTTPException(status_code=404, detail="会话不存在或无权限")
+    if session.user_id and session.user_id != "anonymous" and session.user_id != uid:
+        raise HTTPException(status_code=403, detail="无权删除此会话")
     # Delete messages first
     db.query(ChatMessage).filter(ChatMessage.session_id == session.id).delete()
     db.delete(session)
     db.commit()
-    logger.info(f"Session deleted: {chat_id[:12]}...")
+    logger.info(f"Session deleted: {chat_id[:12]}... by user={uid}")
     return {"message": "已删除"}
 
 
 @router.get("/api/get-messages")
-async def get_messages(session_id: str, db: Session = Depends(get_db)):
-    """Get messages for a session."""
+async def get_messages(
+    session_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get messages for a session (user-scoped)."""
     session_service = SessionService(db)
+    uid = str(user.id)
+    session = session_service.get_by_chat_id(session_id, user_id=uid)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在或无权限")
     messages = session_service.get_session_messages(session_id)
     
     result = []
@@ -698,19 +627,18 @@ async def get_messages(session_id: str, db: Session = Depends(get_db)):
 async def create_session(
     request: Request,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: User = Depends(get_current_user),
 ):
     """Create a new empty chat session, bound to current user."""
     session_service = SessionService(db)
-    username = user.username if user else "anonymous"
-    user_id = str(user.id) if user else "anonymous"
+    username = user.username
+    user_id = str(user.id)
     timestamp = str(datetime.now().timestamp())
     session_id = f"{username}-web-{timestamp}"
     session = session_service.get_or_create_session(session_id, user_id)
-    if user:
-        session.user_id = user_id
-        session.user_name = username
-        db.commit()
+    session.user_id = user_id
+    session.user_name = username
+    db.commit()
     return {"session_id": session.chat_id}
 
 
@@ -718,21 +646,23 @@ async def create_session(
 async def chat_message(
     request: Request,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: User = Depends(get_current_user),
 ):
     """Handle chat message via LangGraph RAG Agent."""
     data = await request.json()
     message = data.get("message", "")
-    username_prefix = (user.username if user else "anonymous") + "-web-"
-    session_id = data.get("session_id", username_prefix + str(datetime.now().timestamp()))
+    session_id = data.get("session_id", f"{user.username}-web-{str(datetime.now().timestamp())}")
     use_kb = data.get("use_kb", True)
     kb_id = data.get("kb_id")
     
     session_service = SessionService(db)
-    user_id = str(user.id) if user else "anonymous"
-    session = session_service.get_or_create_session(session_id, user_id)
-    # Bind user info
-    if user and not session.user_id:
+    user_id = str(user.id)
+    # Strict ownership check: reject if session belongs to another user
+    session = session_service.get_or_create_session(session_id, user_id, strict=True)
+    if session is None:
+        raise HTTPException(status_code=403, detail="无权访问此会话")
+    # Bind user info if not set
+    if not session.user_id:
         session.user_id = user_id
         session.user_name = user.username
         db.commit()
@@ -742,7 +672,7 @@ async def chat_message(
     recent = session_service.get_session_messages(session.chat_id, limit=10)
     chat_history = [{"role": m.role, "content": m.content} for m in recent]
     
-    agent = _get_agent(db, session_id=session_id)
+    agent = _get_agent(db, session_id=session_id, user_id=user.id)
     answer = await agent.run(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id)
     
     session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", answer)
@@ -763,25 +693,27 @@ async def chat_message(
 async def chat_message_stream(
     request: Request,
     db: Session = Depends(get_db),
-    user: Optional[User] = Depends(get_optional_user),
+    user: User = Depends(get_current_user),
 ):
     """SSE streaming chat endpoint — tokens arrive as they're generated."""
     data = await request.json()
     message = data.get("message", "")
-    username_prefix = (user.username if user else "anonymous") + "-web-"
-    session_id = data.get("session_id", username_prefix + str(datetime.now().timestamp()))
+    session_id = data.get("session_id", f"{user.username}-web-{str(datetime.now().timestamp())}")
     use_kb = data.get("use_kb", True)
     kb_id = data.get("kb_id")
 
     session_service = SessionService(db)
-    user_id = str(user.id) if user else "anonymous"
-    session = session_service.get_or_create_session(session_id, user_id)
+    user_id = str(user.id)
+    # Strict ownership check
+    session = session_service.get_or_create_session(session_id, user_id, strict=True)
+    if session is None:
+        raise HTTPException(status_code=403, detail="无权访问此会话")
     session_service.add_message(session.id, str(datetime.now().timestamp()), "user", message)
 
     recent = session_service.get_session_messages(session.chat_id, limit=10)
     chat_history = [{"role": m.role, "content": m.content} for m in recent]
 
-    agent = _get_agent(db, session_id=session_id)
+    agent = _get_agent(db, session_id=session_id, user_id=user.id)
 
     async def event_generator():
         full_answer = ""
@@ -820,8 +752,15 @@ async def chat_message_stream(
 
 
 @router.get("/admin", response_class=HTMLResponse)
-async def admin_panel(request: Request, db: Session = Depends(get_db)):
-    """Admin panel page."""
+async def admin_panel(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Admin panel page — requires login."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
     session_service = SessionService(db)
     sessions = session_service.get_sessions_with_user()
     events = session_service.get_recent_events()
@@ -856,8 +795,16 @@ async def admin_panel(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/admin/session/{chat_id}", response_class=HTMLResponse)
-async def session_detail(request: Request, chat_id: str, db: Session = Depends(get_db)):
-    """Session detail page."""
+async def session_detail(
+    request: Request,
+    chat_id: str,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Session detail page — requires login."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
     session_service = SessionService(db)
     messages = session_service.get_session_messages(chat_id)
     
@@ -932,8 +879,15 @@ async def session_detail(request: Request, chat_id: str, db: Session = Depends(g
 
 
 @router.get("/knowledge", response_class=HTMLResponse)
-async def knowledge_page(request: Request):
-    """Knowledge base management page."""
+async def knowledge_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Knowledge base management page — requires login."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
     return HTMLResponse(content=r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1165,7 +1119,7 @@ async function previewFile(fileId,filename){
     ua.addEventListener("dragleave",function(){ua.classList.remove("dragover");});
     ua.addEventListener("drop",function(e){e.preventDefault();ua.classList.remove("dragover");handleUpload(e.dataTransfer.files[0]);});
 })();
-function logout(){document.cookie="access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";}
+function logout(){fetch('/api/v1/auth/logout',{method:'POST'}).catch(function(){});localStorage.removeItem('token');localStorage.removeItem('username');document.cookie="access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";window.location.href="/login"}
 var kbMoveOptions = "";
 async function loadKBList(){
     try{
@@ -1218,8 +1172,15 @@ loadStats();loadFiles();
 
 
 @router.get("/observability", response_class=HTMLResponse)
-async def observability_page(request: Request):
-    """Observability traces viewer + rating system."""
+async def observability_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Observability traces viewer + rating system — requires login."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
     return HTMLResponse(content=r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>

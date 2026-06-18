@@ -89,9 +89,33 @@
 <script>
 const API = "/api/v1/knowledge";
 
+function authHeaders() {
+    var headers = {};
+    var token = getCookie("access_token");
+    if (token) { headers["Authorization"] = "Bearer " + token; }
+    return headers;
+}
+
+function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+}
+
+async function apiFetch(url, options) {
+    options = options || {};
+    options.headers = Object.assign(options.headers || {}, authHeaders());
+    var res = await fetch(url, options);
+    if (res.status === 401) {
+        alert("登录已过期，请重新登录");
+        window.location.href = "/login";
+        throw new Error("Unauthorized");
+    }
+    return res;
+}
+
 async function loadStats() {
     try {
-        const res = await fetch(`${API}/files/stats`);
+        const res = await apiFetch(`${API}/files/stats`);
         const data = await res.json();
         document.getElementById("statTotal").textContent = data.total || 0;
         const bt = data.by_type || {};
@@ -107,7 +131,7 @@ async function loadFiles() {
     const el = document.getElementById("fileList");
     el.innerHTML = '<div class="loading">加载中...</div>';
     try {
-        const res = await fetch(`${API}/files`);
+        const res = await apiFetch(`${API}/files`);
         const data = await res.json();
         if (!data.files || data.files.length === 0) {
             el.innerHTML = '<div class="empty-state">暂无文件，请上传</div>';
@@ -143,7 +167,7 @@ async function handleUpload(file) {
     statusEl.className = "upload-status"; statusEl.textContent = "上传中..."; statusEl.style.display = "block";
     const formData = new FormData(); formData.append("file", file);
     try {
-        const res = await fetch(`${API}/upload`, { method: "POST", body: formData });
+        const res = await apiFetch(`${API}/upload`, { method: "POST", body: formData });
         const data = await res.json();
         if (res.ok) { statusEl.className = "upload-status success"; statusEl.textContent = data.message + " - " + data.file.filename; loadFiles(); loadStats(); }
         else { statusEl.className = "upload-status error"; statusEl.textContent = data.detail || "上传失败"; }
@@ -152,7 +176,7 @@ async function handleUpload(file) {
 
 async function downloadFile(id, name) {
     try {
-        const res = await fetch(`${API}/download/${id}`);
+        const res = await apiFetch(`${API}/download/${id}`);
         if (!res.ok) { alert("下载失败"); return; }
         const blob = await res.blob(); const url = URL.createObjectURL(blob);
         const a = document.createElement("a"); a.href = url; a.download = name;
@@ -163,7 +187,7 @@ async function downloadFile(id, name) {
 async function deleteFile(id) {
     if (!confirm("确定要删除这个文件吗？")) return;
     try {
-        const res = await fetch(`${API}/files/${id}`, { method: "DELETE" });
+        const res = await apiFetch(`${API}/files/${id}`, { method: "DELETE" });
         if (res.ok) { loadFiles(); loadStats(); } else { alert("删除失败"); }
     } catch(e) { alert("删除失败: " + e.message); }
 }
@@ -176,7 +200,13 @@ uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.cl
 uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
 uploadArea.addEventListener("drop", e => { e.preventDefault(); uploadArea.classList.remove("dragover"); handleUpload(e.dataTransfer.files[0]); });
 
-function logout() { document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; }
+async function logout() {
+    try { await apiFetch('/api/v1/auth/logout', { method: 'POST' }); } catch(e) {}
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    window.location.href = '/login';
+}
 
 loadStats(); loadFiles();
 </script>

@@ -145,6 +145,7 @@ class KnowledgeBase(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, nullable=False, comment="知识库名称")
     description = Column(String(500), comment="知识库描述")
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="所属用户ID，NULL表示全局共享")
     is_active = Column(Boolean, default=True, comment="是否启用")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -168,6 +169,7 @@ class KnowledgeFile(Base):
     chunk_size = Column(Integer, comment="每片字符数")
     chunk_overlap = Column(Integer, comment="重叠字符数")
     uploader = Column(String(100), comment="上传者")
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="所属用户ID，NULL表示全局共享")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
