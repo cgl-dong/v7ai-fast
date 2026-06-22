@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     db_password: str = ""
     db_name: str = ""
 
+    # RAG retrieval configuration
+    rag_search_mode: str = "hybrid"  # dense | hybrid
+    rag_dense_candidates: int = 20
+    rag_bm25_candidates: int = 20
+    rag_rrf_k: int = 60
+
     @property
     def database_url(self) -> str:
         """PostgreSQL connection string."""

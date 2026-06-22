@@ -15,7 +15,7 @@ Embedding model: BAAI/bge-base-zh-v1.5 (768 dims)."""
 import io
 import json
 import logging
-from typing import List
+from typing import List, Iterable
 from sqlalchemy.orm import Session
 
 from app.core.database import KnowledgeFile, DocumentChunk
@@ -211,64 +211,126 @@ class Indexer:
         return None
 
     def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
-        """Search document chunks by semantic similarity, optionally scoped to a KB and user."""
+        """Search chunks with user-safe filters.
+
+        Default mode is hybrid retrieval: dense pgvector candidates + PostgreSQL
+        full-text candidates merged with Reciprocal Rank Fusion.
+        """
+        mode = (settings.rag_search_mode or "hybrid").lower()
+        if mode == "dense":
+            rows = self._dense_search(query, top_k, kb_id=kb_id, user_id=user_id)
+        else:
+            rows = self._hybrid_search(query, top_k, kb_id=kb_id, user_id=user_id)
+
+        if rows:
+            sims = [r.get("similarity", 0) for r in rows]
+            logger.info(f"[search] {len(rows)} results, sims=[{', '.join(f'{s:.3f}' for s in sims)}], "
+                        f"top_sim={sims[0]:.3f}, files={list(set(r['filename'] for r in rows))}")
+        else:
+            logger.warning(f"[search] no results for query: {query[:80]}")
+        return rows
+
+    def _base_filters(self, kb_id: int = None, user_id: int = None) -> tuple[str, dict]:
+        """Build SQL filters shared by all retrieval paths."""
+        clauses = []
+        params = {}
+        if kb_id is not None:
+            clauses.append("kf.kb_id = :kb_id")
+            params["kb_id"] = kb_id
+        if user_id is not None:
+            clauses.append("(kf.user_id = :user_id OR kf.user_id IS NULL)")
+            params["user_id"] = user_id
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        return where_sql, params
+
+    def _row_to_dict(self, r, score_key: str = "similarity") -> dict:
+        return {
+            "id": r.id,
+            "content": r.content,
+            "filename": r.filename,
+            "file_type": r.file_type,
+            "chunk_index": r.chunk_index,
+            "similarity": float(getattr(r, score_key, 0) or 0),
+            "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
+        }
+
+    def _dense_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Search document chunks by semantic similarity."""
         from sqlalchemy import text
 
         logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}, user_id={user_id}")
         query_embedding = embed_query(query)
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
-        if kb_id:
-            sql = text("""
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        sql = text(f"""
                 SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
                        kf.filename, kf.file_type,
                        1 - (dc.embedding <=> :embedding) AS similarity
                 FROM document_chunks dc
                 JOIN knowledge_files kf ON dc.file_id = kf.id
-                WHERE kf.kb_id = :kb_id
+                {where_sql}
                 ORDER BY dc.embedding <=> :embedding
                 LIMIT :limit
             """)
-            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "kb_id": kb_id})
-        elif user_id is not None:
-            sql = text("""
-                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
-                       kf.filename, kf.file_type,
-                       1 - (dc.embedding <=> :embedding) AS similarity
-                FROM document_chunks dc
-                JOIN knowledge_files kf ON dc.file_id = kf.id
-                WHERE kf.user_id = :user_id OR kf.user_id IS NULL
-                ORDER BY dc.embedding <=> :embedding
-                LIMIT :limit
-            """)
-            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "user_id": user_id})
-        else:
-            sql = text("""
-                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
-                       kf.filename, kf.file_type,
-                       1 - (dc.embedding <=> :embedding) AS similarity
-                FROM document_chunks dc
-                JOIN knowledge_files kf ON dc.file_id = kf.id
-                ORDER BY dc.embedding <=> :embedding
-                LIMIT :limit
-            """)
-            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k})
-        rows = []
-        for r in result:
-            rows.append({
-                "id": r.id,
-                "content": r.content,
-                "filename": r.filename,
-                "file_type": r.file_type,
-                "chunk_index": r.chunk_index,
-                "similarity": float(r.similarity),
-                "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
-            })
-
-        if rows:
-            sims = [r["similarity"] for r in rows]
-            logger.info(f"[search] {len(rows)} results, sims=[{', '.join(f'{s:.3f}' for s in sims)}], "
-                        f"top_sim={sims[0]:.3f}, files={list(set(r['filename'] for r in rows))}")
-        else:
-            logger.warning(f"[search] no results for query: {query[:80]}")
+        result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, **params})
+        rows = [self._row_to_dict(r) for r in result]
+        for row in rows:
+            row["retrieval_source"] = "dense"
         return rows
+
+    def _bm25_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Keyword retrieval using PostgreSQL full-text ranking.
+
+        This intentionally uses generated tsvectors so it works before a
+        dedicated GIN index migration is applied. The Alembic migration adds
+        the expression index used to make the same query faster.
+        """
+        from sqlalchemy import text
+
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        filter_prefix = f"{where_sql} AND" if where_sql else "WHERE"
+        sql = text(f"""
+            WITH q AS (SELECT websearch_to_tsquery('simple', :query) AS query)
+            SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                   kf.filename, kf.file_type,
+                   ts_rank_cd(to_tsvector('simple', dc.content), q.query) AS bm25_score
+            FROM document_chunks dc
+            JOIN knowledge_files kf ON dc.file_id = kf.id
+            CROSS JOIN q
+            {filter_prefix} q.query @@ to_tsvector('simple', dc.content)
+            ORDER BY bm25_score DESC
+            LIMIT :limit
+        """)
+        result = self.db.execute(sql, {"query": query, "limit": top_k, **params})
+        rows = [self._row_to_dict(r, score_key="bm25_score") for r in result]
+        for row in rows:
+            row["retrieval_source"] = "bm25"
+        return rows
+
+    def _hybrid_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        dense_k = max(top_k, settings.rag_dense_candidates)
+        bm25_k = max(top_k, settings.rag_bm25_candidates)
+        dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id)
+        try:
+            bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id)
+        except Exception as e:
+            logger.warning(f"[search] BM25 retrieval failed, falling back to dense only: {e}")
+            bm25_rows = []
+        return _rrf_merge([dense_rows, bm25_rows], top_k=top_k, rrf_k=settings.rag_rrf_k)
+
+
+def _rrf_merge(result_sets: Iterable[List[dict]], top_k: int, rrf_k: int = 60) -> List[dict]:
+    """Merge ranked result sets with Reciprocal Rank Fusion."""
+    merged: dict[int, dict] = {}
+    for results in result_sets:
+        for rank, item in enumerate(results, start=1):
+            chunk_id = item["id"]
+            if chunk_id not in merged:
+                merged[chunk_id] = {**item, "retrieval_score": 0.0, "retrieval_sources": []}
+            merged[chunk_id]["retrieval_score"] += 1.0 / (rrf_k + rank)
+            merged[chunk_id]["retrieval_sources"].append(item.get("retrieval_source", "retrieval"))
+            merged[chunk_id]["similarity"] = max(merged[chunk_id].get("similarity", 0.0), item.get("similarity", 0.0))
+
+    ranked = sorted(merged.values(), key=lambda x: x["retrieval_score"], reverse=True)
+    return ranked[:top_k]

@@ -31,6 +31,10 @@ minio_data/
 postgres_data/
 postgres/
 data/
+!data/
+data/*
+!data/eval/
+!data/eval/*.jsonl
 logs/
 
 # Lock files (optional, lock versions in pyproject.toml instead)

@@ -8,12 +8,10 @@ from fastapi.templating import Jinja2Templates
 
 from app.api import api_router
 from app.core.settings import settings
-from app.core.database import init_db
 from app.core.logging import logger
 from app.api.v1.endpoints.woa import router as woa_router
 from app.api.v1.endpoints.web import router as web_router
 
-init_db()
 logger.info("v7ai-fast service starting...")
 
 app = FastAPI(

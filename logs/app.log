@@ -1294,3 +1294,9 @@ DETAIL:  Key (message_id)=() already exists.
 2026-06-18 14:34:14,095 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
 2026-06-18 14:34:14,096 - v7ai-fast - INFO - Embedding model preloaded: dim=768
 2026-06-18 14:34:16,075 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-18 14:35:06,084 - v7ai-fast.knowledge - INFO - File uploaded: 用户文件下载接口说明.docx (docx, 1370602B) -> id=18
+2026-06-18 14:35:12,606 - v7ai-fast - INFO - Index task queued for file=18
+2026-06-18 14:35:15,468 - v7ai-fast.embedding - DEBUG - Embedding 1 documents
+2026-06-18 14:35:16,125 - v7ai-fast.embedding - DEBUG - Embedded 1 documents -> 1 vectors
+2026-06-18 14:35:16,137 - v7ai-fast.knowledge - INFO - [bg-index] file=18 done: {'success': True, 'chunks': 1, 'strategy': 'recursive'}
+2026-06-18 14:35:38,215 - v7ai-fast.knowledge - INFO - File deleted: id=18, name=用户文件下载接口说明.docx
