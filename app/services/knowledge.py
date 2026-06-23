@@ -67,20 +67,32 @@ class KnowledgeService:
                 self._client.make_bucket(settings.minio_bucket)
         return self._client
     
-    def get_all_files(self, file_type: str = None, status: str = None) -> List[KnowledgeFile]:
+    def _apply_user_filter(self, q, user_id: Optional[int] = None):
+        """Apply user isolation: if user_id given, show own + shared (null); else show all."""
+        if user_id is not None:
+            from sqlalchemy import or_
+            q = q.filter(or_(KnowledgeFile.user_id == user_id, KnowledgeFile.user_id.is_(None)))
+        return q
+
+    def get_all_files(self, file_type: str = None, status: str = None, user_id: Optional[int] = None) -> List[KnowledgeFile]:
         q = self.db.query(KnowledgeFile)
         if file_type:
             q = q.filter(KnowledgeFile.file_type == file_type)
         if status:
             q = q.filter(KnowledgeFile.status == status)
+        q = self._apply_user_filter(q, user_id)
         return q.order_by(KnowledgeFile.created_at.desc()).all()
     
-    def get_file_by_id(self, file_id: int) -> Optional[KnowledgeFile]:
-        return self.db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
+    def get_file_by_id(self, file_id: int, user_id: Optional[int] = None) -> Optional[KnowledgeFile]:
+        q = self.db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id)
+        if user_id is not None:
+            from sqlalchemy import or_
+            q = q.filter(or_(KnowledgeFile.user_id == user_id, KnowledgeFile.user_id.is_(None)))
+        return q.first()
     
     def save_upload(self, file_content: bytes, original_name: str, uploader: str = "",
                     chunk_strategy: Optional[str] = None, chunk_size: Optional[int] = None,
-                    chunk_overlap: Optional[int] = None) -> KnowledgeFile:
+                    chunk_overlap: Optional[int] = None, user_id: Optional[int] = None) -> KnowledgeFile:
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
         if ext not in ALLOWED_EXTENSIONS:
             raise ValueError(f"不支持的文件类型: .{ext}，支持: {', '.join(ALLOWED_EXTENSIONS)}")
@@ -109,6 +121,7 @@ class KnowledgeService:
             chunk_strategy=chunk_strategy,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            user_id=user_id,
         )
         self.db.add(record)
         self.db.commit()
@@ -149,17 +162,29 @@ class KnowledgeService:
         logger.info(f"File deleted: id={file_id}, name={record.filename}")
         return True
     
-    def get_file_stats(self) -> dict:
-        total = self.db.query(KnowledgeFile).count()
+    def get_file_stats(self, user_id: Optional[int] = None) -> dict:
+        q_base = self.db.query(KnowledgeFile)
+        if user_id is not None:
+            from sqlalchemy import or_
+            q_base = q_base.filter(or_(KnowledgeFile.user_id == user_id, KnowledgeFile.user_id.is_(None)))
+        total = q_base.count()
         by_type = {}
         for ft in ["txt", "pdf", "xlsx", "docx", "md", "csv"]:
-            count = self.db.query(KnowledgeFile).filter(KnowledgeFile.file_type == ft).count()
+            q_ft = self.db.query(KnowledgeFile).filter(KnowledgeFile.file_type == ft)
+            if user_id is not None:
+                from sqlalchemy import or_
+                q_ft = q_ft.filter(or_(KnowledgeFile.user_id == user_id, KnowledgeFile.user_id.is_(None)))
+            count = q_ft.count()
             if count > 0:
                 by_type[ft] = count
         
         by_status = {}
         for s in ["uploaded", "indexed", "error"]:
-            count = self.db.query(KnowledgeFile).filter(KnowledgeFile.status == s).count()
+            q_s = self.db.query(KnowledgeFile).filter(KnowledgeFile.status == s)
+            if user_id is not None:
+                from sqlalchemy import or_
+                q_s = q_s.filter(or_(KnowledgeFile.user_id == user_id, KnowledgeFile.user_id.is_(None)))
+            count = q_s.count()
             by_status[s] = count
         
         return {"total": total, "by_type": by_type, "by_status": by_status}

@@ -1,0 +1,37 @@
+# 环境文件（含密钥，运行时挂载）
+.env
+.env.*.local
+
+# 虚拟环境（构建时重新安装）
+.venv/
+venv/
+
+# Git
+.git/
+.gitignore
+
+# 数据目录（运行时挂载或由容器自行管理）
+data/
+logs/
+minio_data/
+postgres_data/
+postgres/
+
+# 测试
+.pytest_cache/
+tests/
+
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 文档（减少镜像体积）
+docs/
+img/
+README.md
+ROADMAP.md

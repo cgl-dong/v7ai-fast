@@ -31,7 +31,7 @@
         .session-item .delete-btn:hover { background: rgba(255,80,80,0.3); color: #ff4d4f; }
         .session-time { font-size: 12px; opacity: 0.6; margin-top: 4px; }
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #f7fafc; }
-        .chat-header { background: white; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .chat-header { background: white; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; }
         .chat-header h2 { color: #333; font-size: 20px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
         .message { max-width: 70%; margin-bottom: 15px; padding: 12px 16px; border-radius: 18px; animation: fadeIn 0.3s ease; }
@@ -48,6 +48,17 @@
         .kb-toggle input { width: 16px; height: 16px; cursor: pointer; }
         .kb-toggle.on { color: #52c41a; }
         .kb-select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 20px; font-size: 13px; background: #fff; cursor: pointer; max-width: 120px; }
+        .skill-dropdown { position: relative; display: inline-block; }
+        .skill-btn { padding: 8px 14px; border: 1px solid #d9d9d9; border-radius: 20px; font-size: 13px; background: #f9f0ff; color: #722ed1; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+        .skill-btn:hover { background: #efdbff; border-color: #b37feb; }
+        .skill-menu { display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 4px; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); min-width: 180px; z-index: 100; padding: 4px 0; }
+        .skill-menu.show { display: block; }
+        .skill-menu-item { padding: 8px 14px; cursor: pointer; font-size: 13px; transition: background 0.15s; display: flex; align-items: center; gap: 8px; }
+        .skill-menu-item:hover { background: #f5f5f5; }
+        .skill-menu-item .skill-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .skill-menu-item .skill-type-dot.tool { background: #1890ff; }
+        .skill-toast { position: fixed; top: 20px; right: 20px; background: #52c41a; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .skill-toast.error { background: #ff4d4f; }
         /* Markdown rendered content */
         .message.assistant-message h1, .message.assistant-message h2, .message.assistant-message h3 { margin: 8px 0 4px; font-size: 1.1em; }
         .message.assistant-message p { margin: 4px 0; }
@@ -90,8 +101,13 @@
     
     <div class="chat-area">
         <div class="chat-header">
-            <h2 id="current-session">新对话</h2>
+            <h2 id="current-session" style="flex:1;">新对话</h2>
+            <div class="skill-dropdown" id="skillDropdown" style="display:none;">
+                <button class="skill-btn" onclick="toggleSkillMenu()">🧩 导出</button>
+                <div class="skill-menu" id="skillMenu"></div>
+            </div>
         </div>
+        <div class="skill-toast" id="skillToast"></div>
         <div class="chat-messages" id="messages">
             <div class="empty-state">
                 <h3>选择一个会话开始聊天</h3>
@@ -438,8 +454,10 @@
         }
         
         function logout() {
+            fetch('/api/v1/auth/logout', { method: 'POST', headers: authHeaders() }).catch(function(){});
             localStorage.removeItem('token');
             localStorage.removeItem('username');
+            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             window.location.href = '/login';
         }
         
@@ -454,6 +472,88 @@
         
         loadKbList();
         refreshSessions();  // Override server-rendered sidebar with buttons
+
+        // ── Skill export ──────────────────────────────────────────
+        var _chatSkills = [];
+        async function loadChatSkills() {
+            try {
+                var r = await fetch('/api/v1/skills');
+                var d = await r.json();
+                _chatSkills = (d.skills || []).filter(function(s) {
+                    return s.skill_type === 'tool';
+                });
+                if (_chatSkills.length > 0) {
+                    document.getElementById('skillDropdown').style.display = 'block';
+                    var menu = document.getElementById('skillMenu');
+                    var h = '';
+                    _chatSkills.forEach(function(s) {
+                        h += '<div class="skill-menu-item" onclick="executeSkill(\'' + s.name + '\')">';
+                        h += '<span class="skill-type-dot tool"></span>';
+                        h += '<span style="font-weight:500;">' + escapeHtml(s.name) + '</span>';
+                        h += '<span style="color:#999;font-size:11px;margin-left:auto;">' + escapeHtml((s.description || '').slice(0, 20)) + '</span>';
+                        h += '</div>';
+                    });
+                    menu.innerHTML = h;
+                }
+            } catch(e) { console.error('loadChatSkills:', e); }
+        }
+        function toggleSkillMenu() {
+            if (!currentSessionId) { alert('请先选择一个会话'); return; }
+            var menu = document.getElementById('skillMenu');
+            menu.classList.toggle('show');
+        }
+        function showToast(msg, isError) {
+            var t = document.getElementById('skillToast');
+            t.textContent = msg;
+            t.className = 'skill-toast' + (isError ? ' error' : '');
+            t.style.display = 'block';
+            setTimeout(function(){ t.style.display = 'none'; }, 4000);
+        }
+        async function executeSkill(skillName) {
+            document.getElementById('skillMenu').classList.remove('show');
+            if (!currentSessionId) { alert('请先选择一个会话'); return; }
+            var btn = document.querySelector('.skill-btn');
+            var origText = btn.textContent;
+            btn.textContent = '⏳ 生成中...';
+            btn.disabled = true;
+            try {
+                var r = await fetch('/api/v1/skills/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skill_name: skillName, session_id: currentSessionId })
+                });
+                var d = await r.json();
+                if (r.ok) {
+                    if (d.download_url) {
+                        showToast(d.message + '，开始下载...');
+                        // Trigger download
+                        var a = document.createElement('a');
+                        a.href = d.download_url;
+                        a.download = d.filename || 'export.pptx';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } else {
+                        showToast(d.message || '技能已执行');
+                    }
+                } else {
+                    showToast('执行失败: ' + (d.detail || '未知错误'), true);
+                }
+            } catch(e) {
+                showToast('执行失败: ' + e.message, true);
+            }
+            btn.textContent = origText;
+            btn.disabled = false;
+        }
+        // Close skill menu on outside click
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('skillMenu');
+            var btn = document.querySelector('.skill-btn');
+            if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+        loadChatSkills();
     </script>
 </body>
 </html>

@@ -123,11 +123,12 @@ class RAGState(TypedDict):
 class RAGAgent:
     """High-level wrapper: LangGraph RAG agent for enterprise knowledge Q&A."""
 
-    def __init__(self, db: Session, session_id: str = ""):
+    def __init__(self, db: Session, session_id: str = "", user_id: Optional[int] = None):
         self.db = db
         self.ai = _get_ai_service(db)
         self.tracer = Tracer(db)
         self.session_id = session_id
+        self.user_id = user_id
         self.model_name = self.ai.model
         self._last_trace_id = ""  # For AI Judge to reference
         self._last_node_name = ""
@@ -200,7 +201,7 @@ class RAGAgent:
             ctx.input = question[:200]
             try:
                 indexer = Indexer(self.db)
-                results = indexer.search_chunks(question, top_k=5, kb_id=kb_id)
+                results = indexer.search_chunks(question, top_k=5, kb_id=kb_id, user_id=self.user_id)
                 context = _format_context(results)
                 ctx.output = f"found {len(results)} chunks"
                 ctx.metadata["chunk_count"] = len(results)

@@ -15,7 +15,7 @@ Embedding model: BAAI/bge-base-zh-v1.5 (768 dims)."""
 import io
 import json
 import logging
-from typing import List
+from typing import List, Iterable, Optional
 from sqlalchemy.orm import Session
 
 from app.core.database import KnowledgeFile, DocumentChunk
@@ -23,6 +23,19 @@ from app.core.settings import settings
 from app.services.knowledge import KnowledgeService
 from app.services.embedding import embed_texts, embed_query
 from app.services.chunking import split_text, CHUNK_CONFIG
+
+# Lazy import to avoid circular deps — skills are loaded on demand
+_skill_registry = None
+
+
+def _get_registry():
+    global _skill_registry
+    if _skill_registry is None:
+        from app.services.skill_base import registry
+        # Trigger skill auto-discovery
+        import app.services.skills  # noqa: F401
+        _skill_registry = registry
+    return _skill_registry
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +47,19 @@ class Indexer:
         self.db = db
         self.knowledge_svc = KnowledgeService(db)
 
-    def index_file(self, file_id: int, strategy: str = None, chunk_size: int = None, chunk_overlap: int = None) -> dict:
-        """Index a single file: load → split → embed → store.
+    def index_file(self, file_id: int, strategy: str = None, chunk_size: int = None,
+                   chunk_overlap: int = None, skills: Optional[List[str]] = None) -> dict:
+        """Index a single file: (skills) → load → parse → split → embed → store.
 
         Optionally override chunking strategy/size/overlap per call.
+        If skills are specified, the skill pipeline transforms the file content
+        before parsing (original MinIO file is unchanged).
         """
         record = self.db.query(KnowledgeFile).filter(KnowledgeFile.id == file_id).first()
         if not record:
             return {"error": "文件不存在"}
 
+        applied_skills = []
         try:
             record.status = "indexing"
             record.error_msg = None
@@ -52,7 +69,46 @@ class Indexer:
             import time
             t0 = time.time()
             content_bytes, _, _ = self.knowledge_svc.get_file_content(file_id)
-            text = self._parse_content(content_bytes, record.filename, record.file_type)
+
+            # 1.5 Apply skill pipeline if specified
+            parse_filename = record.filename
+            parse_file_type = record.file_type
+            converted_file_id = None
+            if skills:
+                registry = _get_registry()
+                try:
+                    converted_bytes, converted_name, converted_type = registry.run_pipeline(
+                        content=content_bytes,
+                        filename=record.filename,
+                        file_type=record.file_type,
+                        skill_names=skills,
+                    )
+                    applied_skills = skills
+                    logger.info(
+                        f"[index] skills applied: {skills}, "
+                        f"result_type={converted_type}, size={len(converted_bytes)}B"
+                    )
+
+                    # Save converted file to MinIO and create a new KnowledgeFile record
+                    converted_file_id = self._save_converted_file(
+                        original=record,
+                        content=converted_bytes,
+                        filename=converted_name,
+                        file_type=converted_type,
+                        skills=skills,
+                    )
+                    # Index the converted file content
+                    content_bytes = converted_bytes
+                    parse_filename = converted_name
+                    parse_file_type = converted_type
+                    logger.info(f"[index] converted file saved: id={converted_file_id}")
+                except (ValueError, RuntimeError) as e:
+                    record.status = "error"
+                    record.error_msg = f"技能管线失败: {e}"
+                    self.db.commit()
+                    return {"error": str(e)}
+
+            text = self._parse_content(content_bytes, parse_filename, parse_file_type)
             parse_time = time.time() - t0
             logger.info(f"[index] file={record.filename} (id={file_id}, type={record.file_type}, "
                         f"size={record.file_size}B), parsed {len(text)} chars in {parse_time:.1f}s")
@@ -98,6 +154,8 @@ class Indexer:
                 metadata["chunk_strategy"] = effective_config.strategy
                 metadata["chunk_size"] = effective_config.chunk_size
                 metadata["chunk_overlap"] = effective_config.chunk_overlap
+                if applied_skills:
+                    metadata["skills_applied"] = applied_skills
                 dc = DocumentChunk(
                     file_id=file_id,
                     chunk_index=i,
@@ -114,7 +172,12 @@ class Indexer:
             self.db.commit()
 
             logger.info(f"Indexed file {file_id}: {len(chunks)} chunks (strategy={effective_config.strategy})")
-            return {"success": True, "chunks": len(chunks), "strategy": effective_config.strategy}
+            result = {"success": True, "chunks": len(chunks), "strategy": effective_config.strategy}
+            if applied_skills:
+                result["skills_applied"] = applied_skills
+            if converted_file_id:
+                result["converted_file_id"] = converted_file_id
+            return result
 
         except Exception as e:
             logger.error(f"Failed to index file {file_id}: {e}")
@@ -122,6 +185,61 @@ class Indexer:
             record.error_msg = str(e)
             self.db.commit()
             raise
+
+    def _save_converted_file(
+        self, original: KnowledgeFile, content: bytes,
+        filename: str, file_type: str, skills: List[str],
+    ) -> int:
+        """Save skill pipeline output to MinIO and create a KnowledgeFile record.
+
+        Returns the new file's ID.
+        """
+        import uuid
+        from app.core.settings import settings
+        from minio import Minio
+
+        ext = file_type
+        stored_name = f"{uuid.uuid4().hex}.{ext}"
+        file_size = len(content)
+
+        # Upload to MinIO
+        client = Minio(
+            endpoint=settings.minio_endpoint,
+            access_key=settings.minio_access_key,
+            secret_key=settings.minio_secret_key,
+            secure=settings.minio_secure,
+        )
+        if not client.bucket_exists(settings.minio_bucket):
+            client.make_bucket(settings.minio_bucket)
+        client.put_object(
+            bucket_name=settings.minio_bucket,
+            object_name=stored_name,
+            data=io.BytesIO(content),
+            length=file_size,
+            content_type="application/octet-stream",
+        )
+
+        # Create DB record linking to original
+        new_record = KnowledgeFile(
+            filename=filename,
+            stored_name=stored_name,
+            file_type=file_type,
+            file_size=file_size,
+            file_path=stored_name,
+            status="uploaded",
+            uploader=original.uploader or "skill-pipeline",
+            kb_id=original.kb_id,
+            user_id=original.user_id,
+            chunk_strategy=original.chunk_strategy,
+            chunk_size=original.chunk_size,
+            chunk_overlap=original.chunk_overlap,
+            source_file_id=original.id,
+            skills_applied=json.dumps(skills, ensure_ascii=False),
+        )
+        self.db.add(new_record)
+        self.db.commit()
+        self.db.refresh(new_record)
+        return new_record.id
 
     def _parse_content(self, content: bytes, filename: str, file_type: str) -> str:
         """Parse file bytes into plain text."""
@@ -210,53 +328,127 @@ class Indexer:
 
         return None
 
-    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None) -> List[dict]:
-        """Search document chunks by semantic similarity, optionally scoped to a KB."""
-        from sqlalchemy import text
+    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Search chunks with user-safe filters.
 
-        logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}")
-        query_embedding = embed_query(query)
-        embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
-
-        if kb_id:
-            sql = text("""
-                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
-                       kf.filename, kf.file_type,
-                       1 - (dc.embedding <=> :embedding) AS similarity
-                FROM document_chunks dc
-                JOIN knowledge_files kf ON dc.file_id = kf.id
-                WHERE kf.kb_id = :kb_id
-                ORDER BY dc.embedding <=> :embedding
-                LIMIT :limit
-            """)
-            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, "kb_id": kb_id})
+        Default mode is hybrid retrieval: dense pgvector candidates + PostgreSQL
+        full-text candidates merged with Reciprocal Rank Fusion.
+        """
+        mode = (settings.rag_search_mode or "hybrid").lower()
+        if mode == "dense":
+            rows = self._dense_search(query, top_k, kb_id=kb_id, user_id=user_id)
         else:
-            sql = text("""
-                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
-                       kf.filename, kf.file_type,
-                       1 - (dc.embedding <=> :embedding) AS similarity
-                FROM document_chunks dc
-                JOIN knowledge_files kf ON dc.file_id = kf.id
-                ORDER BY dc.embedding <=> :embedding
-                LIMIT :limit
-            """)
-            result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k})
-        rows = []
-        for r in result:
-            rows.append({
-                "id": r.id,
-                "content": r.content,
-                "filename": r.filename,
-                "file_type": r.file_type,
-                "chunk_index": r.chunk_index,
-                "similarity": float(r.similarity),
-                "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
-            })
+            rows = self._hybrid_search(query, top_k, kb_id=kb_id, user_id=user_id)
 
         if rows:
-            sims = [r["similarity"] for r in rows]
+            sims = [r.get("similarity", 0) for r in rows]
             logger.info(f"[search] {len(rows)} results, sims=[{', '.join(f'{s:.3f}' for s in sims)}], "
                         f"top_sim={sims[0]:.3f}, files={list(set(r['filename'] for r in rows))}")
         else:
             logger.warning(f"[search] no results for query: {query[:80]}")
         return rows
+
+    def _base_filters(self, kb_id: int = None, user_id: int = None) -> tuple[str, dict]:
+        """Build SQL filters shared by all retrieval paths."""
+        clauses = []
+        params = {}
+        if kb_id is not None:
+            clauses.append("kf.kb_id = :kb_id")
+            params["kb_id"] = kb_id
+        if user_id is not None:
+            clauses.append("(kf.user_id = :user_id OR kf.user_id IS NULL)")
+            params["user_id"] = user_id
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        return where_sql, params
+
+    def _row_to_dict(self, r, score_key: str = "similarity") -> dict:
+        return {
+            "id": r.id,
+            "content": r.content,
+            "filename": r.filename,
+            "file_type": r.file_type,
+            "chunk_index": r.chunk_index,
+            "similarity": float(getattr(r, score_key, 0) or 0),
+            "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
+        }
+
+    def _dense_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Search document chunks by semantic similarity."""
+        from sqlalchemy import text
+
+        logger.info(f"[search] query: {query[:80]}..., top_k={top_k}, kb_id={kb_id}, user_id={user_id}")
+        query_embedding = embed_query(query)
+        embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        sql = text(f"""
+                SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                       kf.filename, kf.file_type,
+                       1 - (dc.embedding <=> :embedding) AS similarity
+                FROM document_chunks dc
+                JOIN knowledge_files kf ON dc.file_id = kf.id
+                {where_sql}
+                ORDER BY dc.embedding <=> :embedding
+                LIMIT :limit
+            """)
+        result = self.db.execute(sql, {"embedding": embedding_str, "limit": top_k, **params})
+        rows = [self._row_to_dict(r) for r in result]
+        for row in rows:
+            row["retrieval_source"] = "dense"
+        return rows
+
+    def _bm25_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        """Keyword retrieval using PostgreSQL full-text ranking.
+
+        This intentionally uses generated tsvectors so it works before a
+        dedicated GIN index migration is applied. The Alembic migration adds
+        the expression index used to make the same query faster.
+        """
+        from sqlalchemy import text
+
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        filter_prefix = f"{where_sql} AND" if where_sql else "WHERE"
+        sql = text(f"""
+            WITH q AS (SELECT websearch_to_tsquery('simple', :query) AS query)
+            SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
+                   kf.filename, kf.file_type,
+                   ts_rank_cd(to_tsvector('simple', dc.content), q.query) AS bm25_score
+            FROM document_chunks dc
+            JOIN knowledge_files kf ON dc.file_id = kf.id
+            CROSS JOIN q
+            {filter_prefix} q.query @@ to_tsvector('simple', dc.content)
+            ORDER BY bm25_score DESC
+            LIMIT :limit
+        """)
+        result = self.db.execute(sql, {"query": query, "limit": top_k, **params})
+        rows = [self._row_to_dict(r, score_key="bm25_score") for r in result]
+        for row in rows:
+            row["retrieval_source"] = "bm25"
+        return rows
+
+    def _hybrid_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+        dense_k = max(top_k, settings.rag_dense_candidates)
+        bm25_k = max(top_k, settings.rag_bm25_candidates)
+        dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id)
+        try:
+            bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id)
+        except Exception as e:
+            logger.warning(f"[search] BM25 retrieval failed, falling back to dense only: {e}")
+            bm25_rows = []
+        return _rrf_merge([dense_rows, bm25_rows], top_k=top_k, rrf_k=settings.rag_rrf_k)
+
+
+def _rrf_merge(result_sets: Iterable[List[dict]], top_k: int, rrf_k: int = 60) -> List[dict]:
+    """Merge ranked result sets with Reciprocal Rank Fusion."""
+    merged: dict[int, dict] = {}
+    for results in result_sets:
+        for rank, item in enumerate(results, start=1):
+            chunk_id = item["id"]
+            if chunk_id not in merged:
+                merged[chunk_id] = {**item, "retrieval_score": 0.0, "retrieval_sources": []}
+            merged[chunk_id]["retrieval_score"] += 1.0 / (rrf_k + rank)
+            merged[chunk_id]["retrieval_sources"].append(item.get("retrieval_source", "retrieval"))
+            merged[chunk_id]["similarity"] = max(merged[chunk_id].get("similarity", 0.0), item.get("similarity", 0.0))
+
+    ranked = sorted(merged.values(), key=lambda x: x["retrieval_score"], reverse=True)
+    return ranked[:top_k]
