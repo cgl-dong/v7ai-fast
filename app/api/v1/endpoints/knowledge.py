@@ -52,6 +52,7 @@ class IndexRequest(BaseModel):
     strategy: Optional[str] = Field(None, description="切分策略: recursive/sentence/section/qa/semantic/token/paragraph/fixed/excel")
     chunk_size: Optional[int] = Field(None, ge=64, le=8192, description="每片字符数")
     chunk_overlap: Optional[int] = Field(None, ge=0, le=2048, description="重叠字符数")
+    skills: Optional[list[str]] = Field(None, description="技能管线: 例如 ['pdf_to_docx']，按顺序执行")
 
 
 def _to_file_info(f, kb_map: dict = None) -> dict:
@@ -134,13 +135,17 @@ async def upload_file(
     strategy: Optional[str] = Query(None, description="切分策略，不传则按文件类型自动选择"),
     chunk_size: Optional[int] = Query(None, ge=64, le=8192, description="每片字符数"),
     chunk_overlap: Optional[int] = Query(None, ge=0, le=2048, description="重叠字符数"),
+    skills: Optional[str] = Query(None, description="技能管线，逗号分隔，例如 'pdf_to_docx'"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """上传文件，可选指定分片策略。
+    """上传文件，可选指定分片策略和技能管线。
 
     策略参数会保存到文件记录中，后续索引时自动使用。
     如果不传，索引时按文件类型走默认配置。
+
+    技能管线会在索引时对文件内容进行转换（如 PDF→DOCX），
+    原始文件不受影响。
     """
     svc = KnowledgeService(db)
     content = await file.read()
@@ -163,7 +168,17 @@ async def upload_file(
     except Exception as e:
         logger.error(f"Upload error: {e}")
         raise HTTPException(status_code=503, detail=f"上传失败: {str(e)}")
-    return {"message": "上传成功", "file": _to_file_info(record)}
+
+    # Parse skills if provided (comma-separated string)
+    skill_list = [s.strip() for s in skills.split(",") if s.strip()] if skills else None
+    if skill_list:
+        logger.info(f"Upload with skills hint: {skill_list} (apply at index time)")
+
+    return {
+        "message": "上传成功",
+        "file": _to_file_info(record),
+        "skills_hint": skill_list,
+    }
 
 
 @router.get("/download/{file_id}")
@@ -240,7 +255,8 @@ async def delete_file(
 
 # ── 索引操作 ────────────────────────────────────────────────────
 
-def _run_index_task(file_id: int, strategy: str = None, chunk_size: int = None, chunk_overlap: int = None):
+def _run_index_task(file_id: int, strategy: str = None, chunk_size: int = None,
+                    chunk_overlap: int = None, skills: list[str] = None):
     """Background index task with its own DB session."""
     import logging
     logger_bg = logging.getLogger("v7ai-fast.knowledge")
@@ -248,7 +264,8 @@ def _run_index_task(file_id: int, strategy: str = None, chunk_size: int = None, 
     db = SessionLocal()
     try:
         indexer = Indexer(db)
-        result = indexer.index_file(file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        result = indexer.index_file(file_id, strategy=strategy, chunk_size=chunk_size,
+                                    chunk_overlap=chunk_overlap, skills=skills)
         logger_bg.info(f"[bg-index] file={file_id} done: {result}")
     except Exception as e:
         logger_bg.error(f"[bg-index] file={file_id} failed: {e}")
@@ -282,9 +299,11 @@ async def index_file(
     strategy = params.strategy if (params and params.strategy) else getattr(record, 'chunk_strategy', None)
     chunk_size = params.chunk_size if (params and params.chunk_size) else getattr(record, 'chunk_size', None)
     chunk_overlap = params.chunk_overlap if (params and params.chunk_overlap) else getattr(record, 'chunk_overlap', None)
+    skills = params.skills if (params and params.skills) else None
 
-    background_tasks.add_task(_run_index_task, file_id, strategy=strategy, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    logger.info(f"Index task queued for file={file_id}")
+    background_tasks.add_task(_run_index_task, file_id, strategy=strategy, chunk_size=chunk_size,
+                              chunk_overlap=chunk_overlap, skills=skills)
+    logger.info(f"Index task queued for file={file_id}" + (f" with skills={skills}" if skills else ""))
     return {"message": "索引任务已提交，正在后台处理", "file_id": file_id}
 
 

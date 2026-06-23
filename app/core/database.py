@@ -170,6 +170,24 @@ class KnowledgeFile(Base):
     chunk_overlap = Column(Integer, comment="重叠字符数")
     uploader = Column(String(100), comment="上传者")
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="所属用户ID，NULL表示全局共享")
+    source_file_id = Column(Integer, ForeignKey("knowledge_files.id", ondelete="SET NULL"), nullable=True, index=True, comment="来源文件ID（技能转换生成时指向原始文件）")
+    skills_applied = Column(Text, comment="应用的技能管线JSON数组，如[\"pdf_to_docx\"]")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class SkillDefinition(Base):
+    """已注册的技能定义 — 启动时从 skills/ 目录自动同步"""
+    __tablename__ = "skill_definitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True, comment="技能名称（唯一标识）")
+    skill_type = Column(String(20), nullable=False, default="tool", comment="技能类型: transform / tool")
+    description = Column(String(500), comment="技能描述")
+    input_types = Column(Text, comment="输入文件类型JSON数组，如[\"pdf\"]")
+    output_type = Column(String(50), comment="输出文件类型，如\"docx\"")
+    metadata_json = Column(Text, comment="额外元数据JSON")
+    is_active = Column(Boolean, default=True, comment="是否启用")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

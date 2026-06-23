@@ -1,20 +1,29 @@
 services:
+  # ──────────────────────────────────────────────────────────
+  # 1. PostgreSQL + pgvector
+  # ──────────────────────────────────────────────────────────
   postgres:
-    # 1. 使用预装了pgvector的官方镜像
     image: docker.m.daocloud.io/pgvector/pgvector:pg16
     container_name: postgres-pgvector
     restart: always
     environment:
-      POSTGRES_USER: admin        # 替换为你的数据库用户名
-      POSTGRES_PASSWORD: secret123    # 替换为你的数据库密码
-      POSTGRES_DB: appdb          # 替换为你的数据库名
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+      POSTGRES_DB: appdb
     ports:
-      - "5432:5432"                       # 将宿主机5432端口映射到容器5432端口
+      - "5432:5432"
     volumes:
-      - /home/cgl/v7ai-data/postgres:/var/lib/postgresql/data  # 数据库持久化目录(WSL)
+      - /home/cgl/v7ai-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # ──────────────────────────────────────────────────────────
+  # 2. MinIO 对象存储
+  # ──────────────────────────────────────────────────────────
   minio:
-    # 官方版本号：RELEASE.2024-11-07T00-52-20Z (这是2024年一个较新的稳定版)
     image: docker.m.daocloud.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
     container_name: minio
     restart: always
@@ -27,3 +36,40 @@ services:
     volumes:
       - /home/cgl/v7ai-data/minio:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ──────────────────────────────────────────────────────────
+  # 3. v7ai-fast FastAPI 应用（新增）
+  # ──────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: v7ai-fast
+    restart: always
+    env_file:
+      - .env.docker
+    ports:
+      - "18081:18081"
+    volumes:
+      # 持久化：上传文件、日志、数据
+      - /home/cgl/v7ai-data/app/data:/app/data
+      - /home/cgl/v7ai-data/app/logs:/app/logs
+      # 挂载本地代码（开发模式用，生产可注释掉）
+      # - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    command: >
+      sh -c "
+      echo '=== v7ai-fast deploy ===' &&
+      uv run alembic upgrade head &&
+      echo '=== DB migration done ===' &&
+      uv run uvicorn main:app --host 0.0.0.0 --port 18081 --workers 2
+      "

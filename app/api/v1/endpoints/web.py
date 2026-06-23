@@ -941,6 +941,13 @@ async def knowledge_page(
         .modal h3{margin-bottom:12px;font-size:16px}
         .modal .preview-content{white-space:pre-wrap;font-family:Consolas,monospace;font-size:13px;line-height:1.6;background:#fafafa;padding:12px;border-radius:6px;max-height:60vh;overflow-y:auto}
         .modal .meta{font-size:12px;color:#999;margin-bottom:8px}
+        /* Skill */
+        .skill-chip{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;margin:2px 4px}
+        .skill-chip.active{background:#e6f7ff;color:#1890ff;border:1px solid #91d5ff}
+        .skill-chip.inactive{background:#f5f5f5;color:#999;border:1px solid #d9d9d9}
+        .skill-arrow{color:#999;margin:0 4px;font-size:11px}
+        .skill-select{font-size:12px;padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;background:#fff;max-width:160px}
+        .skill-preview-diff{margin-top:12px;padding:12px;background:#fffbe6;border:1px solid #ffe58f;border-radius:6px;font-size:13px}
     </style>
 </head>
 <body>
@@ -968,6 +975,11 @@ async def knowledge_page(
             <button class="btn btn-ghost" onclick="createKB()" style="background:#52c41a;color:#fff;border:none;">+ 创建</button>
         </div>
         <div id="kbList" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="card">
+        <h2>🧩 技能管线</h2>
+        <p style="font-size:13px;color:#999;margin-bottom:10px;">文档转换技能可在索引前对文件进行预处理（如 PDF→DOCX 提升文本提取质量）</p>
+        <div id="skillList" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span style="color:#999;font-size:13px;">加载中...</span></div>
     </div>
     <div class="card">
         <h2>📤 上传文件</h2>
@@ -1028,7 +1040,13 @@ async function loadFiles(){
             var ts = f.created_at ? f.created_at.slice(0,16).replace('T',' ') : '';
             var fn = he(f.filename);
             var kbTag = f.kb_name ? '<span style="background:#f0f2f5;padding:2px 8px;border-radius:4px;font-size:12px;cursor:pointer;" title="'+he(f.kb_name)+'">'+he(f.kb_name.slice(0,8))+'</span>' : '<span style="color:#ccc;font-size:12px;">未分类</span>';
-            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td>'+kbTag+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="previewFile('+f.id+',\''+fn+'\')" style="background:#1890ff;color:#fff;border:none;">👁 预览</button> <button class="btn btn-ghost btn-sm" onclick="indexFile('+f.id+')" style="background:#f6ad55;color:#fff;border:none;">🔍 索引</button> <select class="kb-select" onchange="moveFileToKb('+f.id+',this.value)" style="padding:2px 4px;font-size:11px;border-radius:4px;max-width:80px;"><option value="">移动至...</option><option value="">未分类</option>'+kbMoveOptions+'</select> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑</button></td></tr>';
+            var skillBtn = '';
+            _transformSkills.forEach(function(s){
+                if (s.input_types.indexOf(f.file_type) >= 0) {
+                    skillBtn += ' <button class="btn btn-ghost btn-sm" onclick="applySkillToFile('+f.id+',[\''+he(s.name)+'\'])" style="background:#722ed1;color:#fff;border:none;" title="'+he(s.description.slice(0,50))+'">🧩 技能索引</button>';
+                }
+            });
+            h += '<tr><td title="'+fn+'">'+he(f.filename.length>30?f.filename.slice(0,30)+'...':f.filename)+'</td><td><span class="type-badge">'+f.file_type.toUpperCase()+'</span></td><td>'+sz+'</td><td>'+kbTag+'</td><td><span class="status-badge status-'+f.status+'">'+sl(f.status)+'</span>'+(f.error_msg?'<br><small style="color:#ff4d4f">'+he(f.error_msg.slice(0,40))+'</small>':'')+'</td><td>'+(f.chunk_count||0)+'</td><td>'+ts+'</td><td><button class="btn btn-ghost btn-sm" onclick="previewFile('+f.id+',\''+fn+'\')" style="background:#1890ff;color:#fff;border:none;">👁 预览</button> <button class="btn btn-ghost btn-sm" onclick="indexFile('+f.id+')" style="background:#f6ad55;color:#fff;border:none;">🔍 索引</button>'+skillBtn+' <select class="kb-select" onchange="moveFileToKb('+f.id+',this.value)" style="padding:2px 4px;font-size:11px;border-radius:4px;max-width:80px;"><option value="">移动至...</option><option value="">未分类</option>'+kbMoveOptions+'</select> <button class="btn btn-danger btn-sm" onclick="deleteFile('+f.id+')">🗑</button></td></tr>';
         });
         h += '</tbody></table>';
         el.innerHTML = h;
@@ -1169,7 +1187,104 @@ async function moveFileToKb(fileId,kbId){
         if(r.ok)loadFiles();else alert("移动失败");
     }catch(e){alert("移动失败: "+e.message)}
 }
+// ── Skill functions ─────────────────────────────────────────────
+const SKILL_API = "/api/v1/skills";
+var _availableSkills = [];
+var _transformSkills = [];
+async function loadSkills(){
+    try{
+        var r=await apiFetch(SKILL_API);
+        var d=await r.json();
+        _availableSkills = d.skills || [];
+        _transformSkills = _availableSkills.filter(function(s){return s.skill_type==='transform';});
+        var el=document.getElementById("skillList");
+        if(_availableSkills.length===0){
+            el.innerHTML='<span style="color:#999;font-size:13px;">暂无可用技能，将 <code>@register_skill</code> 类或 <code>SKILL.md</code> 目录放入 <code>app/services/skills/</code> 即可自动发现</span>';
+            return;
+        }
+        var h='';
+        _availableSkills.forEach(function(s){
+            var isTransform = s.skill_type === 'transform';
+            var bg = isTransform ? '#f9f0ff' : '#f0f5ff';
+            var border = isTransform ? '#d3adf7' : '#adc6ff';
+            var badge = isTransform ? '<span style="font-size:10px;background:#722ed1;color:#fff;padding:1px 6px;border-radius:8px;">转换</span>' : '<span style="font-size:10px;background:#1890ff;color:#fff;padding:1px 6px;border-radius:8px;">工具</span>';
+            var io = isTransform ? '<span class="skill-chip inactive">'+he(s.input_types.join('/'))+'</span><span class="skill-arrow">→</span><span class="skill-chip active">'+he(s.output_type)+'</span>' : '';
+            h+='<div style="padding:8px 14px;background:'+bg+';border:1px solid '+border+';border-radius:8px;display:flex;align-items:center;gap:8px;font-size:13px;">';
+            h+=badge;
+            h+='<span style="font-weight:600;color:#333;">'+he(s.name)+'</span>';
+            h+=io;
+            h+='<span style="color:#999;font-size:11px;">'+he(s.description.slice(0,40))+(s.description.length>40?'...':'')+'</span>';
+            h+='</div>';
+        });
+        el.innerHTML=h;
+    }catch(e){console.error('loadSkills:',e);}
+}
+async function applySkillToFile(fileId,skillNames){
+    if(!confirm("将对文件执行技能管线 ["+skillNames.join(' → ')+"] 并重新索引。继续？")) return;
+    try{
+        var r=await apiFetch(SKILL_API+"/files/"+fileId+"/apply-skills",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({skill_names:skillNames})
+        });
+        var d=await r.json();
+        if(r.ok){
+            alert(d.message);
+            // Poll for completion like indexFile does
+            var attempts=0;
+            var poll=setInterval(async function(){
+                try{
+                    attempts++;
+                    var rr=await apiFetch(API+"/files/"+fileId);
+                    var dd=await rr.json();
+                    if(dd.status==="indexed"||dd.status==="error"||attempts>=60){
+                        clearInterval(poll);
+                        loadFiles();loadStats();
+                        if(attempts>=60) alert("技能索引完成，请刷新查看");
+                    }
+                }catch(e){clearInterval(poll);}
+            },3000);
+        } else {
+            alert("提交失败: "+(d.detail||"未知错误"));
+        }
+    }catch(e){alert("提交失败: "+e.message);}
+}
+async function previewSkillOnFile(fileId){
+    var skillNames=[];
+    if(_transformSkills.length===0){alert("暂无可用转换技能");return;}
+    var fileType='';
+    try{
+        var rr=await apiFetch(API+"/files/"+fileId);
+        var dd=await rr.json();
+        fileType=dd.file_type;
+    }catch(e){}
+    var applicable=_transformSkills.filter(function(s){return s.input_types.indexOf(fileType)>=0;});
+    if(applicable.length===0){alert("没有适用于 ."+fileType+" 的转换技能");return;}
+    skillNames=applicable.map(function(s){return s.name;});
+    // Show preview modal
+    var modal=document.getElementById("previewModal");
+    var contentEl=document.getElementById("previewContent");
+    var metaEl=document.getElementById("previewMeta");
+    modal.classList.add("show");
+    contentEl.textContent="运行技能管线中...";
+    metaEl.textContent="技能: "+skillNames.join(' → ');
+    try{
+        var r=await apiFetch(SKILL_API+"/preview",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({file_id:fileId,skill_names:skillNames})
+        });
+        if(!r.ok){var ed=await r.json();contentEl.textContent="预览失败: "+(ed.detail||r.status);return;}
+        var d=await r.json();
+        metaEl.textContent="原始文件: "+he(d.original_filename)+" ("+d.original_type+", "+d.original_size+"B) → 技能: "+d.skills_applied.join(' → ')+" → "+he(d.transformed_filename)+" ("+d.transformed_type+", "+d.transformed_size+"B, 共"+d.total_length+"字)";
+        contentEl.textContent=d.preview_text||"(空内容)";
+        if(d.total_length>5000){
+            contentEl.textContent+="\n\n... 预览截断，共 "+d.total_length+" 字符 ...";
+        }
+    }catch(e){contentEl.textContent="预览失败: "+e.message;}
+}
 loadKBList();
+loadSkills();
 loadStats();loadFiles();
 </script>
 </body>

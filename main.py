@@ -39,8 +39,25 @@ app.include_router(web_router, prefix="")
 
 @app.on_event("startup")
 async def startup_event():
-    """Preload heavy models at startup to avoid first-request latency."""
+    """Preload heavy models and sync skill definitions at startup."""
     async def _preload():
+        # 1. Discover and sync skills
+        try:
+            from app.services.skill_base import discover_all, sync_skill_definitions
+            from app.core.database import SessionLocal
+            count = discover_all()
+            logger.info(f"Skill discovery: {count} skills found")
+            db = SessionLocal()
+            try:
+                synced = sync_skill_definitions(db)
+                if synced:
+                    logger.info(f"Skill DB sync: {synced} records updated")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Skill discovery/sync failed (non-fatal): {e}")
+
+        # 2. Preload embedding model
         try:
             from app.services.embedding import get_embedding_model
             model = await asyncio.to_thread(get_embedding_model)

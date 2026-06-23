@@ -1300,3 +1300,194 @@ DETAIL:  Key (message_id)=() already exists.
 2026-06-18 14:35:16,125 - v7ai-fast.embedding - DEBUG - Embedded 1 documents -> 1 vectors
 2026-06-18 14:35:16,137 - v7ai-fast.knowledge - INFO - [bg-index] file=18 done: {'success': True, 'chunks': 1, 'strategy': 'recursive'}
 2026-06-18 14:35:38,215 - v7ai-fast.knowledge - INFO - File deleted: id=18, name=用户文件下载接口说明.docx
+2026-06-22 11:35:14,957 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 11:35:15,137 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 11:35:21,346 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 11:35:21,543 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 11:35:21,611 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 11:35:45,546 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-06-22 11:35:47,760 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-06-22 11:36:19,328 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 11:36:19,330 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 11:37:43,397 - v7ai-fast.knowledge - INFO - File uploaded: build_cap.sh (txt, 4815B) -> id=19
+2026-06-22 11:37:58,725 - v7ai-fast - INFO - Index task queued for file=19
+2026-06-22 11:38:01,178 - v7ai-fast.embedding - DEBUG - Embedding 2 documents
+2026-06-22 11:38:03,139 - v7ai-fast.embedding - DEBUG - Embedded 2 documents -> 2 vectors
+2026-06-22 11:38:03,245 - v7ai-fast.knowledge - INFO - [bg-index] file=19 done: {'success': True, 'chunks': 2, 'strategy': 'recursive'}
+2026-06-22 11:38:28,948 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-22 11:38:29,976 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-22 11:38:33,435 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-22 16:08:11,925 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:08:12,434 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:08:15,874 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:08:16,552 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:08:16,588 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:08:58,677 - v7ai-fast.knowledge - INFO - File uploaded: 【课堂笔记】七大软件设计原则.pdf (pdf, 775683B) -> id=20
+2026-06-22 16:09:05,392 - v7ai-fast - INFO - Index task queued for file=20
+2026-06-22 16:09:40,884 - v7ai-fast.embedding - DEBUG - Embedding 19 documents
+2026-06-22 16:09:40,884 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:10:13,943 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:10:14,162 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:10:14,164 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:10:26,593 - v7ai-fast.embedding - DEBUG - Embedded 19 documents -> 19 vectors
+2026-06-22 16:10:26,927 - v7ai-fast.knowledge - INFO - [bg-index] file=20 done: {'success': True, 'chunks': 19, 'strategy': 'recursive'}
+2026-06-22 16:17:46,824 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:17:47,002 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:17:47,051 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:18:08,333 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:18:11,961 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:18:12,049 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:18:12,077 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:18:27,969 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:18:27,972 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:22:05,125 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:05,251 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:05,283 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:22:22,555 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:22:28,243 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:28,423 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:28,487 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:22:42,515 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:22:46,817 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:46,917 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:22:46,944 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:23:03,387 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:23:03,391 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:24:55,897 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:24:55,973 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:24:58,866 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:24:58,996 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:24:59,132 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:25:34,757 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:25:34,758 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:25:54,973 - v7ai-fast - INFO - Skill index task queued: file=20, skills=['pdf_to_docx']
+2026-06-22 16:26:05,260 - v7ai-fast.embedding - DEBUG - Embedding 14 documents
+2026-06-22 16:26:09,288 - v7ai-fast.embedding - DEBUG - Embedded 14 documents -> 14 vectors
+2026-06-22 16:26:09,392 - v7ai-fast.knowledge - INFO - [bg-index] file=20 done: {'success': True, 'chunks': 14, 'strategy': 'recursive'}
+2026-06-22 16:31:26,924 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:31:27,066 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:31:27,109 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:31:45,042 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:31:48,313 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:31:48,421 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:31:48,447 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:32:01,645 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:32:01,646 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:32:09,881 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:09,968 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:09,999 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:32:23,894 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:32:27,325 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:27,432 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:27,469 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:32:40,360 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:32:40,365 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:32:57,841 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:57,922 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:32:57,948 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:33:09,977 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:33:13,463 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:13,545 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:13,576 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:33:26,306 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:33:31,775 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:31,857 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:31,885 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:33:31,980 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.errors.UndefinedTable) relation "skill_definitions" does not exist
+LINE 2: FROM skill_definitions 
+             ^
+
+[SQL: SELECT skill_definitions.id AS skill_definitions_id, skill_definitions.name AS skill_definitions_name, skill_definitions.skill_type AS skill_definitions_skill_type, skill_definitions.description AS skill_definitions_description, skill_definitions.input_types AS skill_definitions_input_types, skill_definitions.output_type AS skill_definitions_output_type, skill_definitions.metadata_json AS skill_definitions_metadata_json, skill_definitions.is_active AS skill_definitions_is_active, skill_definitions.created_at AS skill_definitions_created_at, skill_definitions.updated_at AS skill_definitions_updated_at 
+FROM skill_definitions 
+WHERE skill_definitions.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'pdf_to_docx', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-06-22 16:33:31,982 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:33:44,352 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:33:47,908 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:47,998 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:33:48,041 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:33:48,101 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.errors.UndefinedTable) relation "skill_definitions" does not exist
+LINE 2: FROM skill_definitions 
+             ^
+
+[SQL: SELECT skill_definitions.id AS skill_definitions_id, skill_definitions.name AS skill_definitions_name, skill_definitions.skill_type AS skill_definitions_skill_type, skill_definitions.description AS skill_definitions_description, skill_definitions.input_types AS skill_definitions_input_types, skill_definitions.output_type AS skill_definitions_output_type, skill_definitions.metadata_json AS skill_definitions_metadata_json, skill_definitions.is_active AS skill_definitions_is_active, skill_definitions.created_at AS skill_definitions_created_at, skill_definitions.updated_at AS skill_definitions_updated_at 
+FROM skill_definitions 
+WHERE skill_definitions.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'pdf_to_docx', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-06-22 16:33:48,102 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:34:03,096 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:34:08,585 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:34:08,678 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:34:08,710 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:34:08,764 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.errors.UndefinedTable) relation "skill_definitions" does not exist
+LINE 2: FROM skill_definitions 
+             ^
+
+[SQL: SELECT skill_definitions.id AS skill_definitions_id, skill_definitions.name AS skill_definitions_name, skill_definitions.skill_type AS skill_definitions_skill_type, skill_definitions.description AS skill_definitions_description, skill_definitions.input_types AS skill_definitions_input_types, skill_definitions.output_type AS skill_definitions_output_type, skill_definitions.metadata_json AS skill_definitions_metadata_json, skill_definitions.is_active AS skill_definitions_is_active, skill_definitions.created_at AS skill_definitions_created_at, skill_definitions.updated_at AS skill_definitions_updated_at 
+FROM skill_definitions 
+WHERE skill_definitions.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'pdf_to_docx', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-06-22 16:34:08,765 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:34:23,832 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:34:28,173 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:34:28,342 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:34:28,442 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:34:28,518 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.errors.UndefinedTable) relation "skill_definitions" does not exist
+LINE 2: FROM skill_definitions 
+             ^
+
+[SQL: SELECT skill_definitions.id AS skill_definitions_id, skill_definitions.name AS skill_definitions_name, skill_definitions.skill_type AS skill_definitions_skill_type, skill_definitions.description AS skill_definitions_description, skill_definitions.input_types AS skill_definitions_input_types, skill_definitions.output_type AS skill_definitions_output_type, skill_definitions.metadata_json AS skill_definitions_metadata_json, skill_definitions.is_active AS skill_definitions_is_active, skill_definitions.created_at AS skill_definitions_created_at, skill_definitions.updated_at AS skill_definitions_updated_at 
+FROM skill_definitions 
+WHERE skill_definitions.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'pdf_to_docx', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-06-22 16:34:28,520 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:34:42,581 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:34:42,583 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:49:06,999 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:49:07,073 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:49:09,200 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:49:09,321 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:49:09,356 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:49:09,488 - v7ai-fast - INFO - Skill DB sync: 3 records updated
+2026-06-22 16:49:09,489 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:49:30,767 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:49:30,769 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:49:36,921 - v7ai-fast - INFO - Skill index task queued: file=20, skills=['pdf_to_docx']
+2026-06-22 16:49:44,259 - v7ai-fast.embedding - DEBUG - Embedding 14 documents
+2026-06-22 16:49:52,467 - v7ai-fast.embedding - DEBUG - Embedded 14 documents -> 14 vectors
+2026-06-22 16:49:52,773 - v7ai-fast.knowledge - INFO - [bg-index] file=20 done: {'success': True, 'chunks': 14, 'strategy': 'recursive', 'skills_applied': ['pdf_to_docx'], 'converted_file_id': 21}
+2026-06-22 16:53:20,517 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:53:20,676 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:53:20,734 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:53:20,837 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-06-22 16:53:20,838 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:53:40,075 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:53:40,078 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-22 16:53:48,607 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:53:48,693 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-22 16:53:48,720 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-22 16:53:48,763 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-22 16:54:04,925 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-22 16:54:04,926 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-23 10:37:02,388 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-23 10:37:02,554 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-23 10:37:08,874 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-23 10:37:09,000 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-23 10:37:09,067 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-23 10:37:09,344 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-23 10:37:24,589 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-06-23 10:38:20,163 - v7ai-fast.knowledge - INFO - File uploaded: 账号同步对接开发文档.pdf (pdf, 1157783B) -> id=22
+2026-06-23 10:38:26,687 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-23 10:38:26,690 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-23 10:38:30,878 - v7ai-fast - INFO - Index task queued for file=22
+2026-06-23 10:38:33,774 - v7ai-fast.embedding - DEBUG - Embedding 5 documents
+2026-06-23 10:38:38,963 - v7ai-fast.embedding - DEBUG - Embedded 5 documents -> 5 vectors
+2026-06-23 10:38:39,242 - v7ai-fast.knowledge - INFO - [bg-index] file=22 done: {'success': True, 'chunks': 5, 'strategy': 'recursive'}
