@@ -12,6 +12,7 @@ from app.services.indexer import Indexer
 from app.services.model_config import ModelConfigService
 from app.services.observability import Tracer
 from app.services.judge import evaluate_agent_response
+from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,8 @@ class RAGState(TypedDict):
     messages: List[dict]
     needs_kb: bool
     kb_id: Optional[int]
+    rewritten_queries: List[str]   # Multi-Query rewritten variants
+    hyde_text: Optional[str]       # HyDE hypothetical answer
     kb_results: List[dict]
     context: str
     answer: str
@@ -139,17 +142,20 @@ class RAGAgent:
         workflow = StateGraph(RAGState)
 
         workflow.add_node("classify", self._classify_node)
+        workflow.add_node("rewrite", self._rewrite_node)
         workflow.add_node("retrieve", self._retrieve_node)
         workflow.add_node("generate", self._generate_node)
 
         workflow.set_entry_point("classify")
 
-        def route_after_classify(state: RAGState) -> Literal["retrieve", "generate"]:
-            return "retrieve" if state.get("needs_kb") else "generate"
+        # classify → (needs_kb=true? → rewrite → retrieve) | (needs_kb=false? → generate)
+        def route_after_classify(state: RAGState) -> Literal["rewrite", "generate"]:
+            return "rewrite" if state.get("needs_kb") else "generate"
 
         workflow.add_conditional_edges("classify", route_after_classify, {
-            "retrieve": "retrieve", "generate": "generate"
+            "rewrite": "rewrite", "generate": "generate"
         })
+        workflow.add_edge("rewrite", "retrieve")
         workflow.add_edge("retrieve", "generate")
         workflow.add_edge("generate", END)
 
@@ -187,6 +193,65 @@ class RAGAgent:
                 logger.warning(f"[classify] failed: {e}, defaulting to needs_kb=True")
                 return {"needs_kb": True}
 
+    async def _rewrite_node(self, state: RAGState) -> dict:
+        """Query Rewrite: Multi-Query + HyDE for better retrieval.
+        
+        Multi-Query: generate 2-3 keyword-optimized search queries from the original question.
+        HyDE: generate a hypothetical answer to bridge the semantic gap.
+        """
+        question = state["question"]
+        history = _format_history(state.get("messages", []), max_turns=3)
+
+        if not settings.rag_query_rewrite_enabled:
+            logger.info(f"[rewrite] disabled, using original query")
+            return {"rewritten_queries": [question], "hyde_text": None}
+
+        logger.info(f"[rewrite] rewriting query: {question[:100]}...")
+
+        history_block = f"对话历史:\n{history}\n" if history else ""
+
+        prompt = f"""你是一个搜索查询优化器。将用户问题改写为2-3个更适合知识库检索的关键词查询。
+同时生成一段假设答案(HyDE)，帮助弥合问题和文档之间的语义差距。
+
+{history_block}用户问题: {question}
+
+输出JSON格式:
+{{"queries": ["优化查询1", "优化查询2", "优化查询3"], "hyde": "假设答案内容"}}
+
+要求:
+- queries: 2-3个独立检索查询，使用关键词+实体词组合，去除冗余语气词
+- hyde: 用1-3句话写一个对问题的假设回答（类似知识库中可能包含的内容）
+- 仅输出JSON, 不要其他文字"""
+
+        with self.tracer.trace("rewrite", self.session_id, "agent_node", self.model_name) as ctx:
+            ctx.input = question[:200]
+            try:
+                answer = await self.ai.call_model(prompt)
+                json_str = answer.strip()
+                if "```" in json_str:
+                    json_str = json_str.split("```")[1].replace("json", "", 1).strip()
+                result = json.loads(json_str)
+                queries = result.get("queries", [question])
+                hyde = result.get("hyde", "")
+                
+                if not queries or len(queries) == 0:
+                    queries = [question]
+                
+                ctx.output = f"queries={len(queries)}, hyde_len={len(hyde)}"
+                ctx.metadata["queries"] = queries
+                ctx.metadata["has_hyde"] = bool(hyde)
+                
+                logger.info(f"[rewrite] generated {len(queries)} queries, hyde={len(hyde)} chars")
+                for i, q in enumerate(queries):
+                    logger.info(f"[rewrite]   query[{i}]: {q[:120]}")
+                if hyde:
+                    logger.info(f"[rewrite]   hyde: {hyde[:200]}...")
+                
+                return {"rewritten_queries": queries, "hyde_text": hyde}
+            except Exception as e:
+                logger.warning(f"[rewrite] failed: {e}, using original query")
+                return {"rewritten_queries": [question], "hyde_text": None}
+
     async def _retrieve_node(self, state: RAGState) -> dict:
         if not state.get("needs_kb"):
             logger.info(f"[retrieve] skipped (needs_kb=False)")
@@ -194,14 +259,42 @@ class RAGAgent:
 
         kb_id = state.get("kb_id")
         question = state["question"]
-        logger.info(f"[retrieve] searching (kb_id={kb_id}, top_k=5): {question[:80]}...")
+        # Use rewritten queries if available, fallback to original question
+        search_queries = state.get("rewritten_queries", [question]) or [question]
+        hyde_text = state.get("hyde_text", "")
+        
+        logger.info(f"[retrieve] searching (kb_id={kb_id}, top_k=5, num_queries={len(search_queries)}): {question[:80]}...")
 
         with self.tracer.trace("retrieve", self.session_id, "agent_node", "",
                                {"needs_kb": state.get("needs_kb"), "kb_id": kb_id}) as ctx:
             ctx.input = question[:200]
             try:
                 indexer = Indexer(self.db)
-                results = indexer.search_chunks(question, top_k=5, kb_id=kb_id, user_id=self.user_id)
+                
+                # Search with each rewritten query + HyDE, collect all results
+                all_results = []
+                seen_ids = set()
+                
+                # Primary search: use first rewritten query (best quality)
+                for sq in search_queries[:2]:  # Limit to 2 queries for latency
+                    results = indexer.search_chunks(sq, top_k=5, kb_id=kb_id, user_id=self.user_id)
+                    for r in results:
+                        if r["id"] not in seen_ids:
+                            seen_ids.add(r["id"])
+                            all_results.append(r)
+                
+                # If HyDE was generated, also search with it
+                if hyde_text and len(hyde_text) > 10:
+                    hyde_results = indexer.search_chunks(hyde_text, top_k=5, kb_id=kb_id, user_id=self.user_id)
+                    for r in hyde_results:
+                        if r["id"] not in seen_ids:
+                            seen_ids.add(r["id"])
+                            all_results.append(r)
+                    logger.info(f"[retrieve] HyDE search added {len([r for r in hyde_results if r['id'] not in seen_ids or True])} results")
+                
+                # Sort by similarity, take top 5
+                all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+                results = all_results[:5]
                 context = _format_context(results)
                 ctx.output = f"found {len(results)} chunks"
                 ctx.metadata["chunk_count"] = len(results)

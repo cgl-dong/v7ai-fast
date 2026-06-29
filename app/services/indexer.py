@@ -23,6 +23,7 @@ from app.core.settings import settings
 from app.services.knowledge import KnowledgeService
 from app.services.embedding import embed_texts, embed_query
 from app.services.chunking import split_text, CHUNK_CONFIG
+from app.services.hybrid_search import tokenize, tokens_to_str
 
 # Lazy import to avoid circular deps — skills are loaded on demand
 _skill_registry = None
@@ -156,10 +157,13 @@ class Indexer:
                 metadata["chunk_overlap"] = effective_config.chunk_overlap
                 if applied_skills:
                     metadata["skills_applied"] = applied_skills
+                # Tokenize for BM25 keyword search
+                tokens_str = tokens_to_str(tokenize(chunk["content"]))
                 dc = DocumentChunk(
                     file_id=file_id,
                     chunk_index=i,
                     content=chunk["content"],
+                    tokens=tokens_str,
                     embedding=embeddings[i],
                     metadata_json=json.dumps(metadata, ensure_ascii=False),
                 )
@@ -329,16 +333,30 @@ class Indexer:
         return None
 
     def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
-        """Search chunks with user-safe filters.
+        """Search chunks with hybrid retrieval + Cross-Encoder rerank.
 
-        Default mode is hybrid retrieval: dense pgvector candidates + PostgreSQL
-        full-text candidates merged with Reciprocal Rank Fusion.
+        Pipeline: Dense (pgvector) + BM25 (PG tsvector) → RRF fusion → rerank → top_k
         """
         mode = (settings.rag_search_mode or "hybrid").lower()
         if mode == "dense":
             rows = self._dense_search(query, top_k, kb_id=kb_id, user_id=user_id)
         else:
-            rows = self._hybrid_search(query, top_k, kb_id=kb_id, user_id=user_id)
+            dense_k = max(top_k, settings.rag_dense_candidates)
+            bm25_k = max(top_k, settings.rag_bm25_candidates)
+            dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id)
+            try:
+                bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id)
+            except Exception as e:
+                logger.warning(f"[search] BM25 failed, dense only: {e}")
+                bm25_rows = []
+            rows = _rrf_merge([dense_rows, bm25_rows], top_k=max(top_k, 20), rrf_k=settings.rag_rrf_k)
+
+        # Cross-Encoder rerank
+        if settings.rag_rerank_enabled and rows:
+            from app.services.rerank import rerank
+            rows = rerank(query, rows, top_n=top_k)
+        else:
+            rows = rows[:top_k]
 
         if rows:
             sims = [r.get("similarity", 0) for r in rows]
@@ -398,29 +416,39 @@ class Indexer:
         return rows
 
     def _bm25_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
-        """Keyword retrieval using PostgreSQL full-text ranking.
+        """Keyword retrieval using PostgreSQL full-text search with jieba tokenization.
 
-        This intentionally uses generated tsvectors so it works before a
-        dedicated GIN index migration is applied. The Alembic migration adds
-        the expression index used to make the same query faster.
+        Uses pre-tokenized 'tokens' column for Chinese text, falls back to
+        simple text vector on content for backward compat.
         """
         from sqlalchemy import text
 
+        # Tokenize query with jieba (same as indexing)
+        query_tokens = tokenize(query)
+        query_ts = " & ".join(query_tokens) if query_tokens else query
+
         where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
         filter_prefix = f"{where_sql} AND" if where_sql else "WHERE"
+
+        # Use tokens column if available (has jieba segmentation), else fallback to content
         sql = text(f"""
-            WITH q AS (SELECT websearch_to_tsquery('simple', :query) AS query)
             SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
                    kf.filename, kf.file_type,
-                   ts_rank_cd(to_tsvector('simple', dc.content), q.query) AS bm25_score
+                   COALESCE(
+                       ts_rank_cd(to_tsvector('simple', dc.tokens), to_tsquery('simple', :query)),
+                       ts_rank_cd(to_tsvector('simple', dc.content), to_tsquery('simple', :query)),
+                       0
+                   ) AS bm25_score
             FROM document_chunks dc
             JOIN knowledge_files kf ON dc.file_id = kf.id
-            CROSS JOIN q
-            {filter_prefix} q.query @@ to_tsvector('simple', dc.content)
+            {filter_prefix} (
+                to_tsquery('simple', :query) @@ to_tsvector('simple', dc.tokens)
+                OR to_tsquery('simple', :query) @@ to_tsvector('simple', dc.content)
+            )
             ORDER BY bm25_score DESC
             LIMIT :limit
         """)
-        result = self.db.execute(sql, {"query": query, "limit": top_k, **params})
+        result = self.db.execute(sql, {"query": query_ts, "limit": top_k, **params})
         rows = [self._row_to_dict(r, score_key="bm25_score") for r in result]
         for row in rows:
             row["retrieval_source"] = "bm25"

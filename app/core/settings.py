@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     rag_bm25_candidates: int = 20
     rag_rrf_k: int = 60
 
+    # RAG query rewrite
+    rag_query_rewrite_enabled: bool = True  # Enable Multi-Query + HyDE rewrite before retrieval
+
+    # RAG rerank configuration
+    rag_rerank_enabled: bool = True         # Enable Cross-Encoder reranking
+    rag_rerank_model: str = "BAAI/bge-reranker-base"  # Cross-Encoder model
+    rag_rerank_top_n: int = 5               # Final results after rerank
+
     @property
     def database_url(self) -> str:
         """PostgreSQL connection string."""

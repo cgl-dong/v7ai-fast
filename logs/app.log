@@ -1491,3 +1491,36 @@ WHERE skill_definitions.name = %(name_1)s
 2026-06-23 10:38:33,774 - v7ai-fast.embedding - DEBUG - Embedding 5 documents
 2026-06-23 10:38:38,963 - v7ai-fast.embedding - DEBUG - Embedded 5 documents -> 5 vectors
 2026-06-23 10:38:39,242 - v7ai-fast.knowledge - INFO - [bg-index] file=22 done: {'success': True, 'chunks': 5, 'strategy': 'recursive'}
+2026-06-29 16:27:43,784 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:27:43,902 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:27:47,502 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:27:47,626 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:27:47,690 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:27:48,055 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:28:05,808 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-06-29 16:28:07,828 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-06-29 16:28:35,057 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:28:36,103 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:28:39,064 - v7ai-fast.embedding - DEBUG - Embedding query: 帅宗玉基本信息...
+2026-06-29 16:28:39,064 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:28:43,025 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:28:43,026 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:28:46,615 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:28:48,028 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:28:48,104 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 16:28:53,270 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:31:44,102 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:31:44,342 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:31:44,527 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:31:45,310 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:32:05,052 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:32:10,191 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:32:10,366 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:32:10,422 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:32:10,510 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:32:27,567 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:32:32,286 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:32:32,394 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:32:32,431 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:32:32,541 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:32:51,511 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768

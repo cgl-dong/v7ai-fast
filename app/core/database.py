@@ -60,6 +60,7 @@ class DocumentChunk(Base):
     file_id = Column(Integer, ForeignKey("knowledge_files.id", ondelete="CASCADE"), nullable=False, index=True)
     chunk_index = Column(Integer, default=0, comment="分片序号")
     content = Column(Text, nullable=False, comment="分片文本内容")
+    tokens = Column(Text, comment="空格分隔的中文分词结果，用于BM25关键词检索")
     embedding = Column(Vector(768), nullable=True, comment="文本向量(768维, bge-base-zh-v1.5)") if VECTOR_AVAILABLE else Column(Text, nullable=True)
     metadata_json = Column(Text, comment="元数据JSON(来源/页码/工作表等)")
     created_at = Column(DateTime, default=datetime.now)
