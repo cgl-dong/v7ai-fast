@@ -45,6 +45,7 @@ class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
     kb_id: Optional[int] = None
+    metadata_filter: Optional[dict] = Field(None, description="元数据过滤: {\"file_type\":\"pdf\", \"filename\":\"%报告%\", \"date_from\":\"2025-01-01\", \"metadata.chunk_strategy\":\"section\"}")
 
 
 class IndexRequest(BaseModel):
@@ -342,13 +343,17 @@ async def search_knowledge(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
-    """语义搜索知识库（支持按知识库筛选）"""
+    """语义搜索知识库（支持知识库筛选 + 元数据过滤）"""
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="查询内容不能为空")
     indexer = Indexer(db)
     try:
         user_id = current_user.id if current_user else None
-        results = indexer.search_chunks(req.query, req.top_k, req.kb_id, user_id=user_id)
+        results = indexer.search_chunks(
+            req.query, req.top_k, req.kb_id,
+            user_id=user_id,
+            metadata_filter=req.metadata_filter,
+        )
     except Exception as e:
         logger.error(f"Search error: {e}")
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")

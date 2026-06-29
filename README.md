@@ -11,7 +11,7 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 - 🧠 **LangGraph RAG Agent** — 智能判断是否检索知识库，自动路由：闲聊直接回答 vs 业务问题检索后回答
 - 🤖 **AI Judge 双轨评价** — LLM-as-Judge 自动评分 + 人工复核，多维度质量量化
 - 📚 **知识库管理** — 上传文档 → 自动分片（LlamaIndex）→ pgvector 向量索引 → 语义检索
-- 🔍 **智能检索** — 多策略分片（句子/段落/Token/章节）+ 相似度过滤 + 知识库分类
+- 🔍 **智能检索** — 多策略分片（句子/段落/Token/章节）+ 混合检索（Dense+BM25）+ Query改写（Multi-Query+HyDE）+ Cross-Encoder重排序 + 知识库分类
 - ⭐ **评分系统** — Trace/Observation 多维度打分，AI vs 人工对比分析
 - 📊 **可观测性** — AI 调用链路追踪 + 日志文件滚动存储
 - ⚙️ **多模型管理** — 动态切换 LLM/Embedding 模型，支持 OpenAI 兼容 API
@@ -41,9 +41,15 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 ```
 用户提问 → LangGraph Agent
               │
-              ├─ classify ────── 闲聊 ──→ generate (直接回答)
+              ├─ classify ──── 闲聊 ──→ generate (直接回答)
               │
-              └─ classify ────── 业务 ──→ retrieve (pgvector)
+              └─ classify ──── 业务 ──→ rewrite (Multi-Query + HyDE)
+                                              │
+                                              ▼
+                                         retrieve (Dense + BM25 → RRF)
+                                              │
+                                              ▼
+                                         rerank (Cross-Encoder)
                                               │
                                               ▼
                                          generate (带上下文回答)
@@ -90,11 +96,13 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 
 | 模块 | 状态 | 功能 |
 |------|------|------|
-| 🤖 **LangGraph RAG** | ✅ 已完成 | 智能路由 classify→retrieve→generate |
+| 🤖 **LangGraph RAG** | ✅ 已完成 | classify → rewrite → retrieve → rerank → generate |
 | 🤖 **AI Judge** | ✅ 已完成 | LLM-as-Judge 自动评分 + 人工复核 |
 | 💬 **AI 对话** | ✅ 已完成 | Web Chat + WOA IM 双通道 |
 | 📚 **知识库** | ✅ 已完成 | 上传/预览/下载/索引/软删除/分类绑定 |
-| 🔍 **向量检索** | ✅ 已完成 | pgvector 语义搜索 + 分片策略可选 |
+| 🔍 **混合检索** | ✅ 已完成 | Dense(pgvector) + BM25(tsvector) → RRF 融合 |
+| 🔄 **Query 改写** | ✅ 已完成 | Multi-Query + HyDE 查询增强 |
+| 🎯 **Rerank 重排序** | ✅ 已完成 | Cross-Encoder (bge-reranker-base) 精排 |
 | 📄 **文件预览** | ✅ 已完成 | PDF/DOCX/XLSX/TXT 在线预览 |
 | ⭐ **评分系统** | ✅ 已完成 | Trace/Observation 多维度打分 + AI/人工对比 |
 | 📊 **可观测性** | ✅ 已完成 | AI 调用链路追踪 + 日志文件 |
@@ -133,18 +141,20 @@ v7ai-fast/
 │   │   ├── security.py               # 签名验证 + 加密解密
 │   │   └── settings.py               # Pydantic Settings
 │   ├── services/
-│   │   ├── agent.py                  # LangGraph RAG Agent + AI Judge 触发
+│   │   ├── agent.py                  # LangGraph RAG Agent + Query Rewrite + AI Judge 触发
 │   │   ├── auth.py                   # JWT 认证
 │   │   ├── chunking.py               # LlamaIndex 多策略文本切分
 │   │   ├── deepseek.py               # AI 模型调用（OpenAI 兼容）
 │   │   ├── embedding.py              # BGE-base-zh-v1.5 向量化 (768 dims)
-│   │   ├── indexer.py                # 文档解析 + 分片 + 向量存储 + 内容校验
+│   │   ├── hybrid_search.py          # jieba分词 + BM25 + RRF 融合
+│   │   ├── indexer.py                # 文档解析 + 分片 + 混合检索 + rerank
 │   │   ├── judge.py                  # AI Judge 自动评价服务
 │   │   ├── kb_service.py             # 知识库分类 CRUD + 软删除
 │   │   ├── knowledge.py              # 知识库文件管理（MinIO）
 │   │   ├── model_config.py           # 模型配置管理
 │   │   ├── prompt.py                 # Prompt 模板管理
 │   │   ├── rating.py                 # 多维度评分服务
+│   │   ├── rerank.py                 # Cross-Encoder 重排序
 │   │   ├── session.py                # 会话管理
 │   │   ├── observability.py          # 可观测性追踪服务
 │   │   └── woa.py                    # WOA 消息发送
@@ -197,6 +207,8 @@ v7ai-fast/
 | **Agent** | LangGraph |
 | **LLM** | langchain-openai (DeepSeek / OpenAI 兼容) |
 | **Embedding** | sentence-transformers (BAAI/bge-base-zh-v1.5, 768 dims) |
+| **Reranker** | sentence-transformers CrossEncoder (BAAI/bge-reranker-base) |
+| **BM25** | rank_bm25 + jieba 中文分词 |
 | **分片** | LlamaIndex (SentenceSplitter / TokenTextSplitter) |
 | **向量库** | pgvector (PostgreSQL 扩展) |
 | **存储** | MinIO (S3 兼容) |

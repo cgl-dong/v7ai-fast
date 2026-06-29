@@ -332,20 +332,30 @@ class Indexer:
 
         return None
 
-    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+    def search_chunks(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None,
+                      metadata_filter: dict = None) -> List[dict]:
         """Search chunks with hybrid retrieval + Cross-Encoder rerank.
 
         Pipeline: Dense (pgvector) + BM25 (PG tsvector) → RRF fusion → rerank → top_k
+
+        metadata_filter examples:
+          {"file_type": "pdf"}
+          {"filename": "%报告%"}
+          {"date_from": "2025-01-01", "date_to": "2025-12-31"}
+          {"metadata.chunk_strategy": "section"}
         """
         mode = (settings.rag_search_mode or "hybrid").lower()
         if mode == "dense":
-            rows = self._dense_search(query, top_k, kb_id=kb_id, user_id=user_id)
+            rows = self._dense_search(query, top_k, kb_id=kb_id, user_id=user_id,
+                                      metadata_filter=metadata_filter)
         else:
             dense_k = max(top_k, settings.rag_dense_candidates)
             bm25_k = max(top_k, settings.rag_bm25_candidates)
-            dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id)
+            dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id,
+                                            metadata_filter=metadata_filter)
             try:
-                bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id)
+                bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id,
+                                              metadata_filter=metadata_filter)
             except Exception as e:
                 logger.warning(f"[search] BM25 failed, dense only: {e}")
                 bm25_rows = []
@@ -366,8 +376,17 @@ class Indexer:
             logger.warning(f"[search] no results for query: {query[:80]}")
         return rows
 
-    def _base_filters(self, kb_id: int = None, user_id: int = None) -> tuple[str, dict]:
-        """Build SQL filters shared by all retrieval paths."""
+    def _base_filters(self, kb_id: int = None, user_id: int = None,
+                      metadata_filter: dict = None) -> tuple[str, dict]:
+        """Build SQL WHERE clauses from structured + metadata filters.
+
+        Supported metadata_filter keys:
+          - file_type         → kf.file_type = :mf_file_type
+          - filename          → kf.filename LIKE :mf_filename
+          - date_from         → kf.created_at >= :mf_date_from
+          - date_to           → kf.created_at <= :mf_date_to
+          - metadata.{key}    → dc.metadata_json::jsonb->>'key' = :mf_meta_{key}
+        """
         clauses = []
         params = {}
         if kb_id is not None:
@@ -376,6 +395,31 @@ class Indexer:
         if user_id is not None:
             clauses.append("(kf.user_id = :user_id OR kf.user_id IS NULL)")
             params["user_id"] = user_id
+
+        if metadata_filter:
+            for key, value in metadata_filter.items():
+                if value is None or value == "":
+                    continue
+                if key == "file_type":
+                    clauses.append("kf.file_type = :mf_file_type")
+                    params["mf_file_type"] = value
+                elif key == "filename":
+                    clauses.append("kf.filename LIKE :mf_filename")
+                    params["mf_filename"] = value if "%" in str(value) else f"%{value}%"
+                elif key == "date_from":
+                    clauses.append("kf.created_at >= :mf_date_from")
+                    params["mf_date_from"] = value
+                elif key == "date_to":
+                    clauses.append("kf.created_at <= :mf_date_to")
+                    params["mf_date_to"] = value
+                elif key.startswith("metadata."):
+                    meta_key = key[9:]  # strip "metadata." prefix
+                    param_name = f"mf_meta_{meta_key.replace('.', '_')}"
+                    clauses.append(f"dc.metadata_json::jsonb->>'{meta_key}' = :{param_name}")
+                    params[param_name] = str(value)
+                else:
+                    logger.warning(f"[search] unknown metadata filter key: {key}")
+
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         return where_sql, params
 
@@ -390,7 +434,8 @@ class Indexer:
             "metadata": json.loads(r.metadata_json) if r.metadata_json else {},
         }
 
-    def _dense_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+    def _dense_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None,
+                      metadata_filter: dict = None) -> List[dict]:
         """Search document chunks by semantic similarity."""
         from sqlalchemy import text
 
@@ -398,7 +443,7 @@ class Indexer:
         query_embedding = embed_query(query)
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
-        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id, metadata_filter=metadata_filter)
         sql = text(f"""
                 SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
                        kf.filename, kf.file_type,
@@ -415,7 +460,8 @@ class Indexer:
             row["retrieval_source"] = "dense"
         return rows
 
-    def _bm25_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
+    def _bm25_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None,
+                     metadata_filter: dict = None) -> List[dict]:
         """Keyword retrieval using PostgreSQL full-text search with jieba tokenization.
 
         Uses pre-tokenized 'tokens' column for Chinese text, falls back to
@@ -427,7 +473,7 @@ class Indexer:
         query_tokens = tokenize(query)
         query_ts = " & ".join(query_tokens) if query_tokens else query
 
-        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id)
+        where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id, metadata_filter=metadata_filter)
         filter_prefix = f"{where_sql} AND" if where_sql else "WHERE"
 
         # Use tokens column if available (has jieba segmentation), else fallback to content
@@ -453,17 +499,6 @@ class Indexer:
         for row in rows:
             row["retrieval_source"] = "bm25"
         return rows
-
-    def _hybrid_search(self, query: str, top_k: int = 5, kb_id: int = None, user_id: int = None) -> List[dict]:
-        dense_k = max(top_k, settings.rag_dense_candidates)
-        bm25_k = max(top_k, settings.rag_bm25_candidates)
-        dense_rows = self._dense_search(query, dense_k, kb_id=kb_id, user_id=user_id)
-        try:
-            bm25_rows = self._bm25_search(query, bm25_k, kb_id=kb_id, user_id=user_id)
-        except Exception as e:
-            logger.warning(f"[search] BM25 retrieval failed, falling back to dense only: {e}")
-            bm25_rows = []
-        return _rrf_merge([dense_rows, bm25_rows], top_k=top_k, rrf_k=settings.rag_rrf_k)
 
 
 def _rrf_merge(result_sets: Iterable[List[dict]], top_k: int, rrf_k: int = 60) -> List[dict]:
