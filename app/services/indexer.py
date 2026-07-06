@@ -358,6 +358,7 @@ class Indexer:
                                               metadata_filter=metadata_filter)
             except Exception as e:
                 logger.warning(f"[search] BM25 failed, dense only: {e}")
+                self.db.rollback()  # Reset aborted transaction
                 bm25_rows = []
             rows = _rrf_merge([dense_rows, bm25_rows], top_k=max(top_k, 20), rrf_k=settings.rag_rrf_k)
 
@@ -471,25 +472,26 @@ class Indexer:
 
         # Tokenize query with jieba (same as indexing)
         query_tokens = tokenize(query)
-        query_ts = " & ".join(query_tokens) if query_tokens else query
+        query_ts = " ".join(query_tokens) if query_tokens else query
 
         where_sql, params = self._base_filters(kb_id=kb_id, user_id=user_id, metadata_filter=metadata_filter)
         filter_prefix = f"{where_sql} AND" if where_sql else "WHERE"
 
         # Use tokens column if available (has jieba segmentation), else fallback to content
+        # plainto_tsquery handles Chinese/ASCII mix safely (unlike to_tsquery with & operator)
         sql = text(f"""
             SELECT dc.id, dc.content, dc.metadata_json, dc.chunk_index,
                    kf.filename, kf.file_type,
                    COALESCE(
-                       ts_rank_cd(to_tsvector('simple', dc.tokens), to_tsquery('simple', :query)),
-                       ts_rank_cd(to_tsvector('simple', dc.content), to_tsquery('simple', :query)),
+                       ts_rank_cd(to_tsvector('simple', dc.tokens), plainto_tsquery('simple', :query)),
+                       ts_rank_cd(to_tsvector('simple', dc.content), plainto_tsquery('simple', :query)),
                        0
                    ) AS bm25_score
             FROM document_chunks dc
             JOIN knowledge_files kf ON dc.file_id = kf.id
             {filter_prefix} (
-                to_tsquery('simple', :query) @@ to_tsvector('simple', dc.tokens)
-                OR to_tsquery('simple', :query) @@ to_tsvector('simple', dc.content)
+                plainto_tsquery('simple', :query) @@ to_tsvector('simple', dc.tokens)
+                OR plainto_tsquery('simple', :query) @@ to_tsvector('simple', dc.content)
             )
             ORDER BY bm25_score DESC
             LIMIT :limit

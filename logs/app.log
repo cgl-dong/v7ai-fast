@@ -1524,3 +1524,279 @@ WHERE skill_definitions.name = %(name_1)s
 2026-06-29 16:32:32,431 - v7ai-fast - INFO - Skill discovery: 3 skills found
 2026-06-29 16:32:32,541 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
 2026-06-29 16:32:51,511 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:49:23,727 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:49:23,812 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:49:27,160 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:49:27,291 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:49:27,340 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:49:28,617 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:49:59,532 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:49:59,534 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 16:50:05,141 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:50:06,392 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:50:08,749 - v7ai-fast.embedding - DEBUG - Embedding query: 工号201204676的人员信息...
+2026-06-29 16:50:13,735 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:50:15,701 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:50:20,495 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:58:36,100 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:58:36,171 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:58:38,631 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:58:38,735 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 16:58:38,769 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 16:58:38,922 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 16:58:53,495 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 16:58:53,509 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 16:59:02,230 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:59:03,140 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:59:05,713 - v7ai-fast.embedding - DEBUG - Embedding query: 工号201204676的人员信息...
+2026-06-29 16:59:12,092 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 16:59:12,770 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 16:59:16,782 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:01:44,103 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:01:44,752 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:01:44,809 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:01:45,187 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:01:58,235 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:02:01,893 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:02:01,978 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:02:02,010 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:02:02,069 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:02:11,830 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:02:11,831 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 17:07:55,306 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:07:56,259 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:07:58,919 - v7ai-fast.embedding - DEBUG - Embedding query: 工号201204676的人员信息...
+2026-06-29 17:08:02,452 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:08:03,524 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:08:14,954 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:09:17,038 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:09:17,911 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:09:20,542 - v7ai-fast.embedding - DEBUG - Embedding query: 帅宗玉基本信息...
+2026-06-29 17:09:21,362 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:09:21,878 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:09:28,466 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:09:57,173 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:09:58,099 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:10:00,723 - v7ai-fast.embedding - DEBUG - Embedding query: 工号201204676的基本信息...
+2026-06-29 17:10:01,471 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:10:02,297 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:10:05,906 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:02,097 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:03,428 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:11:06,089 - v7ai-fast.embedding - DEBUG - Embedding query: 201204676的基本信息...
+2026-06-29 17:11:06,727 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:07,736 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:11:13,201 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:34,403 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:35,296 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:11:38,250 - v7ai-fast.embedding - DEBUG - Embedding query: 车国亮基本信息...
+2026-06-29 17:11:39,276 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:11:39,722 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:11:46,693 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:13:48,777 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:13:48,920 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:13:48,968 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:13:49,176 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:14:04,986 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:14:09,383 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:14:09,479 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:14:09,509 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:14:09,579 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:14:19,994 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:14:25,457 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:14:25,564 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:14:25,594 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:14:25,689 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:14:37,721 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:14:37,723 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 17:15:14,809 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:15:15,747 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:15:18,881 - v7ai-fast.embedding - DEBUG - Embedding query: 201204676的基本信息...
+2026-06-29 17:15:24,577 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:15:25,604 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:15:31,306 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:16:24,950 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:16:25,843 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:16:28,811 - v7ai-fast.embedding - DEBUG - Embedding query: 杨东呢...
+2026-06-29 17:16:29,612 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:16:30,054 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:16:39,252 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:17:24,640 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:17:25,602 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:17:27,971 - v7ai-fast.embedding - DEBUG - Embedding query: 杨东基本信息...
+2026-06-29 17:17:28,676 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:17:29,567 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:17:35,920 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:18:23,352 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:18:24,095 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:18:26,669 - v7ai-fast.embedding - DEBUG - Embedding query: 毛少东基本信息...
+2026-06-29 17:18:27,384 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:18:28,201 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:18:38,566 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:19:00,087 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:19:00,935 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:19:04,295 - v7ai-fast.embedding - DEBUG - Embedding query: 帅宗玉基本信息...
+2026-06-29 17:19:05,047 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:19:05,488 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:19:10,267 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:20:10,396 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:20:10,616 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:20:10,672 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:20:10,900 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:20:22,708 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:20:22,720 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 17:20:27,800 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:20:27,896 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-06-29 17:20:27,925 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-06-29 17:20:27,984 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-06-29 17:20:40,037 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-06-29 17:20:40,039 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-06-29 17:20:51,640 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:20:52,531 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-06-29 17:20:54,819 - v7ai-fast.embedding - DEBUG - Embedding query: 毛少东基本信息...
+2026-06-29 17:20:58,292 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-06-29 17:20:59,247 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 13:34:26,966 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:34:27,090 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:34:32,582 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:34:32,777 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:34:32,867 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:34:33,103 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:35:21,858 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-07-06 13:35:24,880 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-07-06 13:35:35,192 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:35:35,193 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:35:58,757 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 13:35:59,083 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 13:36:00,841 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 13:37:03,242 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:37:03,367 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:37:09,107 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:37:09,301 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:37:09,413 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:37:09,549 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:37:36,103 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:37:36,105 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:40:59,093 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 13:40:59,452 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 13:41:04,082 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 13:42:49,258 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:42:49,397 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:42:49,436 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:42:49,496 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:43:08,004 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:43:11,894 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:43:11,993 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:43:12,039 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:43:12,110 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:43:36,616 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:43:36,617 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:44:44,323 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:44:44,411 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:44:44,440 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:44:44,487 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:44:59,562 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:44:59,563 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:45:16,745 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:45:16,847 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:45:16,887 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:45:16,936 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:45:32,679 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:45:36,763 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:45:36,889 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:45:36,934 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:45:36,990 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:45:55,395 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:45:55,396 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:47:20,951 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:47:21,013 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:47:23,761 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:47:23,851 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 13:47:23,886 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 13:47:23,967 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 13:47:43,437 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 13:47:43,438 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 13:48:08,100 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:02:19,388 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:02:19,488 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:02:21,321 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:02:21,404 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:02:21,538 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:02:21,615 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:02:21,616 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:02:21,618 - v7ai-fast - WARNING - Failed to preload embedding model (will lazy-load on first use): No module named 'sentence_transformers'
+2026-07-06 14:03:47,531 - v7ai-fast.auth - INFO - User registered: test01
+2026-07-06 14:03:52,310 - v7ai-fast.auth - INFO - User authenticated: test01
+2026-07-06 14:04:16,779 - v7ai-fast.auth - INFO - User authenticated: test01
+2026-07-06 14:04:16,931 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:04:24,865 - v7ai-fast.auth - INFO - User authenticated: test01
+2026-07-06 14:04:28,510 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:04:28,529 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:04:32,417 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:04:32,434 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:05:13,914 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:14,155 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:14,185 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:05:14,247 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:05:14,248 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:05:16,600 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:16,663 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:18,962 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:19,056 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:05:19,691 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:05:19,756 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:05:19,758 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:05:19,760 - v7ai-fast - WARNING - Failed to preload embedding model (will lazy-load on first use): No module named 'sentence_transformers'
+2026-07-06 14:05:40,531 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 14:05:40,532 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 14:05:50,675 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:05:50,701 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:05:53,386 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:05:53,413 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:05:57,812 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:06:22,218 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:22,307 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:22,337 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:06:22,398 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:06:22,398 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:06:29,455 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:29,520 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:31,403 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:31,468 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:06:31,593 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:06:31,634 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:06:31,635 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:06:31,639 - v7ai-fast - WARNING - Failed to preload embedding model (will lazy-load on first use): No module named 'sentence_transformers'
+2026-07-06 14:06:39,476 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 14:06:39,477 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 14:06:56,709 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:06:56,726 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:07:05,491 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:07:05,509 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:07:39,644 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:07:39,663 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:07:44,623 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:07:44,642 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:13:59,663 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:13:59,724 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:14:02,084 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:14:02,193 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-07-06 14:14:02,222 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-07-06 14:14:02,277 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-07-06 14:14:02,278 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-07-06 14:14:14,486 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:14,504 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:14:17,789 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:20,863 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-07-06 14:14:20,864 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-07-06 14:14:37,566 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:37,599 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:14:40,801 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:51,062 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:51,079 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:14:53,302 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:14:53,345 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:14:56,153 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:15:03,961 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-07-06 14:15:03,977 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-07-06 14:15:07,584 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro

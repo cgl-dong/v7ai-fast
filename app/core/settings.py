@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     rag_rerank_model: str = "BAAI/bge-reranker-base"  # Cross-Encoder model
     rag_rerank_top_n: int = 5               # Final results after rerank
 
+    # Web Search Configuration
+    web_search_enabled: bool = True         # 启用Web搜索增强（bing_html无需Key，默认开启）
+    web_search_provider: str = "bing_html" # 搜索后端: bing_html | bing | duckduckgo | custom
+    web_search_api_key: str = ""            # Bing Search API Key (bing模式必填)
+    web_search_api_url: str = ""            # Bing API URL或自定义搜索端点
+    web_search_max_results: int = 5         # 每次搜索返回结果数
+    web_search_fallback_threshold: float = 0.6  # 知识库相似度低于此值时触发联网补充
+
     @property
     def database_url(self) -> str:
         """PostgreSQL connection string."""

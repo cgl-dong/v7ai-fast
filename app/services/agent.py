@@ -12,6 +12,7 @@ from app.services.indexer import Indexer
 from app.services.model_config import ModelConfigService
 from app.services.observability import Tracer
 from app.services.judge import evaluate_agent_response
+from app.services.web_search import WebSearch
 from app.core.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -113,12 +114,13 @@ async def _summarize_history(ai_service, messages: List[dict]) -> str:
 class RAGState(TypedDict):
     question: str
     messages: List[dict]
-    needs_kb: bool
+    need_type: str               # "direct" | "kb" | "web" — classify结果
     kb_id: Optional[int]
     rewritten_queries: List[str]   # Multi-Query rewritten variants
     hyde_text: Optional[str]       # HyDE hypothetical answer
     kb_results: List[dict]
-    context: str
+    web_results: List[dict]        # Web search results (raw)
+    context: str                   # 最终上下文（KB + Web 融合）
     answer: str
     error: Optional[str]
 
@@ -144,35 +146,75 @@ class RAGAgent:
         workflow.add_node("classify", self._classify_node)
         workflow.add_node("rewrite", self._rewrite_node)
         workflow.add_node("retrieve", self._retrieve_node)
+        workflow.add_node("web_search", self._web_search_node)
         workflow.add_node("generate", self._generate_node)
 
         workflow.set_entry_point("classify")
 
-        # classify → (needs_kb=true? → rewrite → retrieve) | (needs_kb=false? → generate)
-        def route_after_classify(state: RAGState) -> Literal["rewrite", "generate"]:
-            return "rewrite" if state.get("needs_kb") else "generate"
+        # Three-way classify routing
+        def route_after_classify(state: RAGState) -> Literal["rewrite", "web_search", "generate"]:
+            nt = state.get("need_type", "direct")
+            if nt == "kb":
+                return "rewrite"
+            elif nt == "web":
+                return "web_search"
+            return "generate"
 
         workflow.add_conditional_edges("classify", route_after_classify, {
-            "rewrite": "rewrite", "generate": "generate"
+            "rewrite": "rewrite",
+            "web_search": "web_search",
+            "generate": "generate",
         })
         workflow.add_edge("rewrite", "retrieve")
-        workflow.add_edge("retrieve", "generate")
+
+        # After KB retrieval: if results are insufficient, supplement with web search
+        def route_after_retrieve(state: RAGState) -> Literal["web_search", "generate"]:
+            kb_results = state.get("kb_results", [])
+            # If no KB results or top result similarity is below threshold, supplement with web
+            if not kb_results:
+                logger.info("[route] no KB results → supplementing with web search")
+                return "web_search"
+            top_sim = kb_results[0].get("similarity", 0)
+            if top_sim < settings.web_search_fallback_threshold:
+                logger.info(f"[route] KB top_sim={top_sim:.3f} < threshold={settings.web_search_fallback_threshold} → supplementing with web")
+                return "web_search"
+            logger.info(f"[route] KB results sufficient (top_sim={top_sim:.3f}) → generate")
+            return "generate"
+
+        workflow.add_conditional_edges("retrieve", route_after_retrieve, {
+            "web_search": "web_search",
+            "generate": "generate",
+        })
+        workflow.add_edge("web_search", "generate")
         workflow.add_edge("generate", END)
 
         return workflow.compile()
 
     async def _classify_node(self, state: RAGState) -> dict:
         question = state["question"]
+
+        # If need_type is already pre-set (e.g. use_kb=False + use_web=True), skip classify
+        preset = state.get("need_type", "")
+        if preset in ("web", "direct"):
+            logger.info(f"[classify] skipping — pre-set need_type={preset}")
+            return {"need_type": preset}
+
         logger.info(f"[classify] question: {question[:100]}...")
 
-        prompt = f"""判断用户问题是否需要从企业知识库检索。
+        prompt = f"""判断用户问题类型，从以下三种中选择一种：
 
-需要知识库的情况：询问数据、报表、文档内容、内部规章、项目信息
-不需要知识库的情况：闲聊问候、通用知识、代码编写、翻译、计算
+1. direct — 不需要检索任何外部信息。闲聊问候、通用知识、代码编写、翻译、计算、创意写作、角色扮演
+2. kb — 需要查企业知识库。询问公司内部数据、报表、文档内容、内部规章、项目信息、产品参数
+3. web — 需要联网搜索实时信息。新闻事件、股票股价、天气预报、今日日期、最新政策、名人近况、比赛结果
 
 问题: {question}
 
-输出JSON: {{"need_kb": true/false, "reason": "理由"}}"""
+输出JSON: {{"type": "direct/kb/web", "reason": "理由"}}
+
+注意：
+- 如果不确定，优先选 kb（知识库）
+- 只有明确需要实时/时效性信息时，才选 web
+- 通用知识和闲聊一律选 direct"""
 
         with self.tracer.trace("classify", self.session_id, "agent_node", self.model_name) as ctx:
             ctx.input = question
@@ -183,15 +225,15 @@ class RAGAgent:
                 if "```" in json_str:
                     json_str = json_str.split("```")[1].replace("json", "", 1)
                 result = json.loads(json_str)
-                needs_kb = result.get("need_kb", False)
+                need_type = result.get("type", "direct")
                 reason = result.get("reason", "")
-                ctx.output = f"needs_kb={needs_kb}"
+                ctx.output = f"need_type={need_type}"
                 ctx.metadata["reason"] = reason
-                logger.info(f"[classify] result: needs_kb={needs_kb}, reason={reason}")
-                return {"needs_kb": needs_kb}
+                logger.info(f"[classify] result: type={need_type}, reason={reason}")
+                return {"need_type": need_type}
             except Exception as e:
-                logger.warning(f"[classify] failed: {e}, defaulting to needs_kb=True")
-                return {"needs_kb": True}
+                logger.warning(f"[classify] failed: {e}, defaulting to need_type=kb")
+                return {"need_type": "kb"}
 
     async def _rewrite_node(self, state: RAGState) -> dict:
         """Query Rewrite: Multi-Query + HyDE for better retrieval.
@@ -253,20 +295,16 @@ class RAGAgent:
                 return {"rewritten_queries": [question], "hyde_text": None}
 
     async def _retrieve_node(self, state: RAGState) -> dict:
-        if not state.get("needs_kb"):
-            logger.info(f"[retrieve] skipped (needs_kb=False)")
-            return {"kb_results": [], "context": ""}
-
         kb_id = state.get("kb_id")
         question = state["question"]
         # Use rewritten queries if available, fallback to original question
         search_queries = state.get("rewritten_queries", [question]) or [question]
         hyde_text = state.get("hyde_text", "")
-        
+
         logger.info(f"[retrieve] searching (kb_id={kb_id}, top_k=5, num_queries={len(search_queries)}): {question[:80]}...")
 
         with self.tracer.trace("retrieve", self.session_id, "agent_node", "",
-                               {"needs_kb": state.get("needs_kb"), "kb_id": kb_id}) as ctx:
+                               {"need_type": "kb", "kb_id": kb_id}) as ctx:
             ctx.input = question[:200]
             try:
                 indexer = Indexer(self.db)
@@ -317,6 +355,58 @@ class RAGAgent:
                 logger.error(f"[retrieve] error: {e}")
                 return {"kb_results": [], "context": "", "error": str(e)}
 
+    async def _web_search_node(self, state: RAGState) -> dict:
+        """Web search node — queries the configured search provider and
+        merges results into the state context.
+
+        Can be triggered by:
+          - classify: need_type="web" (user explicitly asked for realtime info)
+          - route_after_retrieve: KB results insufficient, supplement with web
+        """
+        question = state["question"]
+        kb_context = state.get("context", "")
+
+        logger.info(f"[web_search] searching: {question[:80]}...")
+
+        with self.tracer.trace("web_search", self.session_id, "agent_node", "") as ctx:
+            ctx.input = question[:200]
+            try:
+                svc = WebSearch()
+                raw_results = await svc.search(question)
+                web_context = svc.format_results(raw_results)
+
+                ctx.output = f"found {len(raw_results)} web results"
+                ctx.metadata["result_count"] = len(raw_results)
+                ctx.metadata["provider"] = svc.provider
+
+                logger.info(f"[web_search] got {len(raw_results)} results from {svc.provider}")
+
+                # Merge KB context + web context
+                if kb_context and web_context:
+                    merged = (
+                        f"【企业知识库内容】\n{kb_context}\n\n"
+                        f"【网络搜索结果】\n{web_context}"
+                    )
+                    logger.info(f"[web_search] merged KB + web context ({len(kb_context)} + {len(web_context)} chars)")
+                elif web_context:
+                    merged = web_context
+                else:
+                    merged = kb_context or ""
+
+                return {
+                    "context": merged,
+                    "web_results": raw_results,
+                }
+
+            except Exception as e:
+                logger.error(f"[web_search] error: {e}")
+                # Fallback: keep whatever KB context already exists
+                return {
+                    "context": kb_context,
+                    "web_results": [],
+                    "error": str(e),
+                }
+
     async def _generate_node(self, state: RAGState) -> dict:
         question = state["question"]
         context = state.get("context", "")
@@ -335,7 +425,24 @@ class RAGAgent:
                 history = f"[对话背景摘要]\n{summary}\n\n{history}"
 
         if has_context:
-            prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
+            # Detect if web search results are present in context
+            has_web = bool(state.get("web_results"))
+            if has_web:
+                prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
+
+{history}参考信息:
+{context}
+
+用户问题: {question}
+
+要求:
+- 优先使用企业知识库内容回答内部业务问题
+- 使用网络搜索结果回答实时/时效性问题
+- 综合两类信息时说明信息来源
+- 信息不足时如实说明
+- 用中文，简洁专业"""
+            else:
+                prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
 
 {history}知识库内容:
 {context}
@@ -364,7 +471,7 @@ class RAGAgent:
                 logger.error(f"[{node_name}] error: {e}")
                 return {"answer": f"生成回答出错: {e}", "error": str(e)}
 
-    async def run(self, message: str, chat_history: List[dict] = None, use_kb: bool = True, kb_id: int = None) -> str:
+    async def run(self, message: str, chat_history: List[dict] = None, use_kb: bool = True, kb_id: int = None, use_web: bool = True) -> str:
         """Main entry point: question → graph → answer.
 
         Args:
@@ -372,15 +479,18 @@ class RAGAgent:
             chat_history: Previous conversation turns
             use_kb: If False, skip retrieval entirely and answer directly
             kb_id: Optional knowledge base ID to scope retrieval
+            use_web: If False, skip web search even when classify suggests it
         """
         import time
         t0 = time.time()
-        logger.info(f"[agent] start: use_kb={use_kb}, kb_id={kb_id}, session={self.session_id}, "
+        logger.info(f"[agent] start: use_kb={use_kb}, use_web={use_web}, kb_id={kb_id}, session={self.session_id}, "
                     f"question={message[:80]}...")
 
-        # Fast path: user wants direct answer without RAG
-        if not use_kb:
-            logger.info(f"[agent] direct mode (use_kb=False), model={self.model_name}")
+        web_enabled = settings.web_search_enabled and use_web
+
+        # Fast path: user wants direct answer without any retrieval
+        if not use_kb and not web_enabled:
+            logger.info(f"[agent] direct mode (use_kb=False, use_web=False), model={self.model_name}")
             with self.tracer.trace("generate_direct", self.session_id, "agent_node", self.model_name,
                                    {"use_kb": False}) as ctx:
                 self._last_trace_id = ctx.trace_id
@@ -398,13 +508,25 @@ class RAGAgent:
                     logger.error(f"[agent] direct error: {e}, elapsed={elapsed:.1f}s")
                     return f"生成回答出错: {e}"
 
-        logger.info(f"[agent] RAG mode, model={self.model_name}")
+        # Classify and route: if use_kb is off but use_web is on, force "web" type
+        if not use_kb and web_enabled:
+            need_type = "web"
+            logger.info(f"[agent] use_kb=False, use_web=True → forcing need_type=web")
+        else:
+            classify_state = {"question": message, "messages": chat_history or []}
+            result = await self._classify_node(classify_state)
+            need_type = result.get("need_type", "kb")
+
+        logger.info(f"[agent] RAG mode, need_type={need_type}, model={self.model_name}")
         state: RAGState = {
             "question": message,
             "messages": chat_history or [],
-            "needs_kb": False,
+            "need_type": need_type,
             "kb_id": kb_id,
+            "rewritten_queries": [],
+            "hyde_text": None,
             "kb_results": [],
+            "web_results": [],
             "context": "",
             "answer": "",
             "error": None,
@@ -414,8 +536,8 @@ class RAGAgent:
             answer = result.get("answer", "未能生成回答")
             context = result.get("context", "")
             elapsed = time.time() - t0
-            needs_kb = result.get("needs_kb", False)
-            logger.info(f"[agent] RAG done: needs_kb={needs_kb}, context={len(context)} chars, "
+            need_type = result.get("need_type", "direct")
+            logger.info(f"[agent] RAG done: need_type={need_type}, context={len(context)} chars, "
                         f"answer={len(answer)} chars, elapsed={elapsed:.1f}s")
             _fire_judge(self._last_trace_id, self.session_id, message, answer, context, self._last_node_name)
             return answer
@@ -440,7 +562,7 @@ class RAGAgent:
                     return f"处理失败: {e}"
 
     async def run_stream(self, message: str, chat_history: List[dict] = None,
-                         use_kb: bool = True, kb_id: int = None):
+                         use_kb: bool = True, kb_id: int = None, use_web: bool = True):
         """Streaming version: same pipeline, yields SSE-ready tokens.
 
         Uses classify+retrieve (non-streaming, fast), then streams the generate step.
@@ -448,37 +570,75 @@ class RAGAgent:
         import time, asyncio
         t0 = time.time()
         messages_list = chat_history or []
-        logger.info(f"[agent-stream] start: use_kb={use_kb}, kb_id={kb_id}, session={self.session_id}")
+        logger.info(f"[agent-stream] start: use_kb={use_kb}, use_web={use_web}, kb_id={kb_id}, session={self.session_id}")
+
+        web_enabled = settings.web_search_enabled and use_web
 
         # ── Classify ──────────────
-        needs_kb = use_kb
-        if use_kb:
+        need_type = "kb" if use_kb else "direct"
+        if use_web and not use_kb:
+            need_type = "web"
+            logger.info("[agent-stream] use_kb=False, use_web=True → need_type=web")
+        elif use_kb:
             classify_state = {"question": message, "messages": messages_list}
             result = await self._classify_node(classify_state)
-            needs_kb = result.get("needs_kb", True)
+            need_type = result.get("need_type", "kb")
 
-        # ── Retrieve ──────────────
+        # ── Retrieve & Web Search ──
         context = ""
         kb_results = []
-        if needs_kb:
+        web_results = []
+        if need_type == "kb":
             retrieve_state = {
-                "question": message, "kb_id": kb_id, "needs_kb": True,
+                "question": message, "kb_id": kb_id, "need_type": "kb",
                 "messages": messages_list,
             }
             result = await self._retrieve_node(retrieve_state)
             context = result.get("context", "")
             kb_results = result.get("kb_results", [])
-            self._last_sources = kb_results
+
+            # KB results insufficient? supplement with web search
+            if not kb_results or kb_results[0].get("similarity", 0) < settings.web_search_fallback_threshold:
+                if web_enabled:
+                    web_state = {"question": message, "context": context, "kb_id": kb_id}
+                    web_result = await self._web_search_node(web_state)
+                    context = web_result.get("context", context)
+                    web_results = web_result.get("web_results", [])
+
+        elif need_type == "web":
+            if web_enabled:
+                web_state = {"question": message, "context": "", "kb_id": kb_id}
+                web_result = await self._web_search_node(web_state)
+                context = web_result.get("context", "")
+                web_results = web_result.get("web_results", [])
+
+        self._last_sources = kb_results or web_results
 
         # ── Generate (streaming) ──
         if context:
+            has_web = bool(web_results)
             history = _format_history(messages_list)
             all_msgs = messages_list
             if len(all_msgs) > 6:
                 summary = await _summarize_history(self.ai, all_msgs[:-4])
                 if summary:
                     history = f"[对话背景摘要]\n{summary}\n\n{history}"
-            prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
+            if has_web:
+                prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
+
+{history}参考信息:
+{context}
+
+用户问题: {message}
+
+要求:
+- 优先使用企业知识库内容回答内部业务问题
+- 使用网络搜索结果回答实时/时效性问题
+- 综合两类信息时说明信息来源
+- 信息不足时如实说明
+- 用中文，简洁专业"""
+            else:
+                prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
 
 {history}知识库内容:
 {context}

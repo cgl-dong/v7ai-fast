@@ -8,6 +8,7 @@ Provides per-node latency, token estimation, error tracking for:
 Data is persisted to the ai_traces table for Admin panel visualization.
 """
 import json
+import logging
 import time
 import uuid
 import functools
@@ -15,6 +16,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.database import AITrace
+
+logger = logging.getLogger(__name__)
 
 
 def estimate_tokens(text: str) -> int:
@@ -167,6 +170,13 @@ class _TraceContext:
             self.db.add(record)
             self.db.commit()
         except Exception:
-            pass  # Don't let tracing failure affect business logic
+            logger.warning(
+                "Failed to commit trace node=%s trace_id=%s — rolling back session",
+                self.node_name, self.trace_id, exc_info=True,
+            )
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback also failed for trace_id=%s", self.trace_id)
 
         return False  # Don't suppress exceptions

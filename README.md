@@ -41,24 +41,49 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 ```
 用户提问 → LangGraph Agent
               │
-              ├─ classify ──── 闲聊 ──→ generate (直接回答)
+              ├─ classify ──── direct ──→ generate (直接回答)
+              │                  闲聊/通用知识
               │
-              └─ classify ──── 业务 ──→ rewrite (Multi-Query + HyDE)
-                                              │
-                                              ▼
-                                         retrieve (Dense + BM25 → RRF)
-                                              │
-                                              ▼
-                                         rerank (Cross-Encoder)
-                                              │
-                                              ▼
-                                         generate (带上下文回答)
-                                              │
-                          ┌───────────────────┘
-                          ▼
-                    AI Judge (fire-and-forget)
-                    独立模型自动评分 + 维度理由
+              ├─ classify ──── kb ──→ rewrite (Multi-Query + HyDE)
+              │    业务问题            │
+              │                       ▼
+              │                  retrieve (Dense + BM25 → RRF)
+              │                       │
+              │                 ┌─────┴──────┐
+              │                 │            │
+              │           结果充分      结果不足
+              │                 │            │
+              │                 │            ▼
+              │                 │       web_search (联网补充)
+              │                 │            │
+              │                 └─────┬──────┘
+              │                       ▼
+              │                  rerank (Cross-Encoder)
+              │                       │
+              │                       ▼
+              │                  generate (带上下文回答)
+              │                       │
+              ├─ classify ──── web ───┤
+              │    实时/时效性问题      │
+              │       直接联网搜索      │
+              │                       ▼
+              │                  generate (联网信息回答)
+              │
+              └───────────────────────┘
+                                │
+                          AI Judge (fire-and-forget)
+                          独立模型自动评分 + 维度理由
 ```
+
+### Web搜索增强（新增）
+
+当用户询问**实时信息**（新闻、股价、天气、最新政策等）或知识库检索结果不足时，Agent自动触发联网搜索：
+
+- **三路分类**：classify节点将问题分为 direct（直答）/ kb（知识库）/ web（联网）三类
+- **智能降级**：知识库检索结果相似度低于阈值（默认0.6）时，自动联网补充
+- **上下文融合**：知识库结果 + 网络搜索结果合并注入LLM，LLM可综合回答
+- **多后端支持**：Bing Web Search API（推荐国内使用）、DuckDuckGo（免Key）、自定义端点
+- **与LLM解耦**：搜索逻辑在项目层实现，换任何模型都不影响
 
 ### AI Judge 双轨评价
 
@@ -116,6 +141,7 @@ v7ai-fast 面向企业内部的智能化知识管理与问答平台，集成 WOA
 | ⚡ **SSE 流式** | ✅ 已完成 | Server-Sent Events 逐 token 推送 |
 | 📊 **管理面板** | ✅ 已完成 | Admin 页面：模型配置 + 会话 + Prompt |
 | 🔌 **MCP 模块** | 📋 规划中 | Model Context Protocol，工具调用 |
+| 🌐 **Web 搜索增强** | ✅ 已完成 | 三路分类 + 联网搜索 + KB/Web 智能融合 |
 | 📈 **日志监控** | 📋 规划中 | 调用统计 + 成本分析 + 告警 |
 
 ## 项目结构
@@ -157,6 +183,7 @@ v7ai-fast/
 │   │   ├── rerank.py                 # Cross-Encoder 重排序
 │   │   ├── session.py                # 会话管理
 │   │   ├── observability.py          # 可观测性追踪服务
+│   │   ├── web_search.py             # Web搜索服务（Bing/DuckDuckGo/自定义）
 │   │   └── woa.py                    # WOA 消息发送
 │   └── templates/
 │       └── chat_full.html            # Chat UI（marked.js Markdown 渲染）

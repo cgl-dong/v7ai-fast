@@ -654,7 +654,8 @@ async def chat_message(
     session_id = data.get("session_id", f"{user.username}-web-{str(datetime.now().timestamp())}")
     use_kb = data.get("use_kb", True)
     kb_id = data.get("kb_id")
-    
+    use_web = data.get("use_web", True)
+
     session_service = SessionService(db)
     user_id = str(user.id)
     # Strict ownership check: reject if session belongs to another user
@@ -671,9 +672,9 @@ async def chat_message(
     # Load recent chat history for memory
     recent = session_service.get_session_messages(session.chat_id, limit=10)
     chat_history = [{"role": m.role, "content": m.content} for m in recent]
-    
+
     agent = _get_agent(db, session_id=session_id, user_id=user.id)
-    answer = await agent.run(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id)
+    answer = await agent.run(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id, use_web=use_web)
     
     session_service.add_message(session.id, str(datetime.now().timestamp()), "assistant", answer)
 
@@ -701,6 +702,7 @@ async def chat_message_stream(
     session_id = data.get("session_id", f"{user.username}-web-{str(datetime.now().timestamp())}")
     use_kb = data.get("use_kb", True)
     kb_id = data.get("kb_id")
+    use_web = data.get("use_web", True)
 
     session_service = SessionService(db)
     user_id = str(user.id)
@@ -718,7 +720,7 @@ async def chat_message_stream(
     async def event_generator():
         full_answer = ""
         try:
-            async for token in agent.run_stream(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id):
+            async for token in agent.run_stream(message, chat_history=chat_history, use_kb=use_kb, kb_id=kb_id, use_web=use_web):
                 full_answer += token
                 yield f"data: {json.dumps({'token': token})}\n\n"
 

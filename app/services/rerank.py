@@ -4,9 +4,12 @@ Precision-focused re-ranking after Dense+BM25 candidate retrieval.
 Lazy-loaded singleton to avoid startup delay.
 """
 import logging
+import os
 from typing import List, Optional
 
 from app.core.settings import settings
+
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 logger = logging.getLogger(__name__)
 
@@ -70,4 +73,6 @@ def rerank(
         return result
     except Exception as e:
         logger.warning(f"[rerank] failed: {e}, returning original order")
+        logger.info("[rerank] hint: set rag_rerank_enabled=false in .env to disable, "
+                     "or pre-download model: python -c \"from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-base')\"")
         return candidates[:top_n]

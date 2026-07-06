@@ -47,6 +47,9 @@
         .kb-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; cursor: pointer; white-space: nowrap; user-select: none; }
         .kb-toggle input { width: 16px; height: 16px; cursor: pointer; }
         .kb-toggle.on { color: #52c41a; }
+        .web-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; cursor: pointer; white-space: nowrap; user-select: none; }
+        .web-toggle input { width: 16px; height: 16px; cursor: pointer; }
+        .web-toggle.on { color: #1890ff; }
         .kb-select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 20px; font-size: 13px; background: #fff; cursor: pointer; max-width: 120px; }
         .skill-dropdown { position: relative; display: inline-block; }
         .skill-btn { padding: 8px 14px; border: 1px solid #d9d9d9; border-radius: 20px; font-size: 13px; background: #f9f0ff; color: #722ed1; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
@@ -122,6 +125,9 @@
             <label class="kb-toggle on" id="kbToggle" title="开启后AI会检索知识库文档回答问题">
                 <input type="checkbox" id="useKb" checked onchange="toggleKb()"> 📚
             </label>
+            <label class="web-toggle" id="webToggle" title="开启后AI可联网搜索实时信息（需服务端启用）">
+                <input type="checkbox" id="useWeb" onchange="toggleWeb()"> 🌐
+            </label>
             <button id="send-button" disabled>发送</button>
         </div>
     </div>
@@ -129,12 +135,19 @@
     <script>
         var currentSessionId = null;
         var useKb = true;
+        var useWeb = false;
         var kbId = null;
         
         function toggleKb() {
             useKb = document.getElementById('useKb').checked;
             var label = document.getElementById('kbToggle');
             if (useKb) { label.classList.add('on'); }
+            else { label.classList.remove('on'); }
+        }
+        function toggleWeb() {
+            useWeb = document.getElementById('useWeb').checked;
+            var label = document.getElementById('webToggle');
+            if (useWeb) { label.classList.add('on'); }
             else { label.classList.remove('on'); }
         }
         function updateKb() {
@@ -285,7 +298,7 @@
                 var response = await fetch('/api/chat/stream', {
                     method: 'POST',
                     headers: authHeaders(),
-                    body: JSON.stringify({ message: message, session_id: currentSessionId, use_kb: useKb, kb_id: kbId })
+                    body: JSON.stringify({ message: message, session_id: currentSessionId, use_kb: useKb, kb_id: kbId, use_web: useWeb })
                 });
                 var reader = response.body.getReader();
                 var decoder = new TextDecoder();
