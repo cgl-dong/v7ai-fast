@@ -1800,3 +1800,444 @@ WHERE skill_definitions.name = %(name_1)s
 2026-07-06 14:15:03,961 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
 2026-07-06 14:15:03,977 - v7ai-fast.deepseek - INFO - AI attempt 1/3
 2026-07-06 14:15:07,584 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-10 11:41:32,300 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:41:32,362 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:41:34,211 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:41:34,302 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:41:34,457 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-10 11:41:34,678 - v7ai-fast - INFO - Skill DB sync: 3 records updated
+2026-08-10 11:41:34,679 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-10 11:41:34,680 - v7ai-fast - WARNING - Failed to preload embedding model (will lazy-load on first use): No module named 'sentence_transformers'
+2026-08-10 11:42:02,659 - v7ai-fast.auth - INFO - User registered: smoke01
+2026-08-10 11:42:03,301 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-10 11:42:04,245 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-10 11:42:04,271 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-10 11:42:10,880 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-10 11:42:10,901 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-10 11:43:43,963 - v7ai-fast.auth - INFO - User registered: cheguoliang
+2026-08-10 11:43:55,978 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-08-10 11:44:03,797 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-08-10 11:44:38,946 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-08-10 11:45:14,568 - v7ai-fast.auth - INFO - User registered: cheguoliang
+2026-08-10 11:45:17,835 - v7ai-fast.auth - WARNING - Auth failed: cheguoliang
+2026-08-10 11:45:21,429 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-08-10 11:46:30,035 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-10 11:46:30,055 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-10 11:46:32,991 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-10 11:56:23,378 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:56:23,449 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:56:25,245 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:56:25,324 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 11:56:25,436 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-10 11:56:25,657 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-10 11:56:25,658 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-10 11:59:14,281 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-10 11:59:14,282 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-10 11:59:47,823 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-10 11:59:48,056 - v7ai-fast.kb - INFO - KB created: id=1, name=测试知识库, user_id=1
+2026-08-10 12:03:07,842 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 12:03:07,905 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 12:03:09,738 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 12:03:09,836 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-10 12:03:09,952 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-10 12:03:10,115 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-10 12:03:34,872 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-10 12:03:34,876 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-10 12:03:41,022 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-10 12:17:14,459 - v7ai-fast - ERROR - Upload error: HTTPConnectionPool(host='10.6.127.137', port=9000): Max retries exceeded with url: /know?location= (Caused by ConnectTimeoutError(<urllib3.connection.HTTPConnection object at 0x7c65b2d4bd60>, 'Connection to 10.6.127.137 timed out. (connect timeout=300)'))
+2026-08-11 09:12:11,295 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:12:11,363 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:12:14,497 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:12:14,574 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:12:14,694 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-11 09:12:14,969 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-11 09:12:24,160 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-08-11 09:12:41,436 - v7ai-fast - ERROR - MinIO upload error: S3 operation failed; code: InvalidAccessKeyId, message: The Access Key Id you provided does not exist in our records., resource: /know, request_id: 18CA9B1F67392F97, host_id: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8, bucket_name: know
+2026-08-11 09:12:43,902 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-11 09:12:43,904 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-11 09:12:55,515 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:12:55,638 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:12:55,752 - v7ai-fast - ERROR - MinIO upload error: S3 operation failed; code: InvalidAccessKeyId, message: The Access Key Id you provided does not exist in our records., resource: /know, request_id: 18CA9B22CA0E462E, host_id: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8, bucket_name: know
+2026-08-11 09:13:45,354 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:13:45,472 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:13:45,691 - v7ai-fast.knowledge - INFO - File uploaded: 测试文档.txt (txt, 148B) -> id=1
+2026-08-11 09:14:01,922 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:14:02,002 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:14:02,157 - v7ai-fast.knowledge - INFO - File uploaded: 测试文档.txt (txt, 148B) -> id=2
+2026-08-11 09:14:02,221 - v7ai-fast.embedding - DEBUG - Embedding query: 海螺集团总部在哪里...
+2026-08-11 09:14:21,808 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:14:21,880 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:14:22,058 - v7ai-fast.knowledge - INFO - File uploaded: 测试文档.txt (txt, 148B) -> id=3
+2026-08-11 09:14:22,114 - v7ai-fast - INFO - Index task queued for file=3
+2026-08-11 09:14:22,656 - v7ai-fast.embedding - DEBUG - Embedding query: 海螺集团总部在哪里...
+2026-08-11 09:14:24,241 - v7ai-fast.embedding - DEBUG - Embedding 1 documents
+2026-08-11 09:14:24,535 - v7ai-fast.embedding - DEBUG - Embedded 1 documents -> 1 vectors
+2026-08-11 09:14:24,595 - v7ai-fast.knowledge - INFO - [bg-index] file=3 done: {'success': True, 'chunks': 1, 'strategy': 'recursive'}
+2026-08-11 09:15:38,869 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:15:38,968 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:15:39,194 - v7ai-fast.knowledge - INFO - File uploaded: 测试文档.txt (txt, 148B) -> id=4
+2026-08-11 09:15:39,242 - v7ai-fast - INFO - Index task queued for file=4
+2026-08-11 09:15:39,369 - v7ai-fast.embedding - DEBUG - Embedding 1 documents
+2026-08-11 09:15:39,554 - v7ai-fast.embedding - DEBUG - Embedded 1 documents -> 1 vectors
+2026-08-11 09:15:39,599 - v7ai-fast.knowledge - INFO - [bg-index] file=4 done: {'success': True, 'chunks': 1, 'strategy': 'recursive'}
+2026-08-11 09:15:45,276 - v7ai-fast.embedding - DEBUG - Embedding query: 海螺集团总部在哪里...
+2026-08-11 09:22:07,250 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:22:07,348 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:22:09,943 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:22:10,061 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:22:10,256 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-11 09:22:10,433 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-11 09:22:38,729 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-11 09:22:38,731 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-11 09:22:39,879 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:22:40,420 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-11 09:22:40,441 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-11 09:22:46,816 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-11 09:22:46,834 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-11 09:26:08,606 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:26:08,671 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:26:10,712 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:26:10,793 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-11 09:26:10,925 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-11 09:26:11,114 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-11 09:26:28,505 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-11 09:26:28,510 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-11 09:26:43,206 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-11 09:26:43,333 - v7ai-fast.kb - INFO - KB deactivated: id=1, name=测试知识库
+2026-08-11 09:26:43,558 - v7ai-fast.knowledge - INFO - File uploaded: 测试文档.txt (txt, 148B) -> id=5
+2026-08-11 09:26:43,622 - v7ai-fast - INFO - Index task queued for file=5
+2026-08-11 09:26:45,284 - v7ai-fast.embedding - DEBUG - Embedding 1 documents
+2026-08-11 09:26:46,286 - v7ai-fast.embedding - DEBUG - Embedded 1 documents -> 1 vectors
+2026-08-11 09:26:46,775 - v7ai-fast.knowledge - INFO - [bg-index] file=5 done: {'success': True, 'chunks': 1, 'strategy': 'recursive'}
+2026-08-11 09:27:08,702 - v7ai-fast.embedding - DEBUG - Embedding query: 海螺集团总部在哪里...
+2026-08-11 09:38:17,812 - v7ai-fast.kb - INFO - KB created: id=9, name=测试, user_id=3
+2026-08-11 09:38:29,209 - v7ai-fast.knowledge - INFO - File uploaded: 数据治理配置系统-WBS工作分解-v2.xlsx (xlsx, 20360B) -> id=6
+2026-08-11 09:38:43,389 - v7ai-fast - INFO - Index task queued for file=6
+2026-08-11 09:38:43,516 - v7ai-fast.embedding - DEBUG - Embedding 28 documents
+2026-08-11 09:38:55,830 - v7ai-fast.embedding - DEBUG - Embedded 28 documents -> 28 vectors
+2026-08-11 09:38:55,985 - v7ai-fast.knowledge - INFO - [bg-index] file=6 done: {'success': True, 'chunks': 28, 'strategy': 'excel'}
+2026-08-12 09:34:53,721 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:34:53,802 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:34:55,885 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:34:55,992 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:34:56,048 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-12 09:35:17,098 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.137", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-12 09:35:17,099 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-12 09:36:17,647 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-12 09:36:34,248 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-12 09:36:59,548 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-08-12 09:37:00,080 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-08-12 09:40:15,654 - v7ai-fast.deepseek - INFO - AI stream call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-pro
+2026-08-12 09:53:15,770 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:53:15,849 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:53:17,905 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:53:17,997 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-12 09:53:18,031 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-12 09:53:18,718 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-12 09:53:18,719 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-12 09:53:38,390 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-12 09:53:38,392 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-12 09:54:00,131 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash
+2026-08-12 09:54:00,431 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-12 09:55:18,261 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash
+2026-08-12 09:55:18,580 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-14 09:41:18,698 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:41:18,803 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:41:20,637 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:41:20,725 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:41:20,755 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 09:41:24,351 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.133", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 09:41:24,352 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 09:42:25,332 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 09:42:25,332 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 09:54:22,581 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:54:22,662 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:54:22,689 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 09:54:26,273 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.133", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 09:54:26,277 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 09:54:53,705 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 09:54:53,706 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 09:55:24,242 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:55:24,320 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:55:24,348 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 09:55:28,077 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.133", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 09:55:28,078 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 09:56:00,128 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 09:56:03,282 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:56:03,363 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:56:03,402 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 09:56:07,045 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.133", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 09:56:07,046 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 09:56:27,133 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 09:56:27,135 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 09:57:10,597 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:57:10,701 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:57:12,658 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:57:12,744 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 09:57:12,870 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 09:57:13,314 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.133", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 09:57:13,316 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 09:57:36,915 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 09:57:36,919 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:17:31,969 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash
+2026-08-14 10:17:32,313 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-14 10:18:01,196 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash
+2026-08-14 10:18:01,495 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-14 10:20:31,035 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:20:31,089 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:20:33,047 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:20:33,134 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:20:33,164 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:20:54,211 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 10:20:54,212 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:21:09,461 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:21:09,462 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:22:29,368 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:22:29,477 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:22:29,509 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:22:50,557 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 10:22:50,558 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:23:21,437 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:23:25,079 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:25,167 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:25,195 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:23:44,340 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:44,413 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:46,256 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 10:23:46,257 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:23:46,270 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:46,409 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:23:46,536 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:24:10,421 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:24:16,854 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:24:57,368 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:24:57,429 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:24:59,430 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:24:59,513 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:24:59,543 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:24:59,995 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:25:19,284 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:25:19,285 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:26:00,881 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.6.127.33", port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 10:26:00,883 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:26:33,145 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:26:33,149 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:30:18,113 - v7ai-fast.auth - INFO - User authenticated: cheguoliang
+2026-08-14 10:32:13,645 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:32:13,722 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:32:13,749 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:32:15,704 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:32:35,077 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:32:38,038 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:32:38,112 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:32:38,138 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:32:39,179 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:33:01,504 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:33:04,448 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:04,546 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:04,573 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:33:07,970 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:33:21,660 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:33:24,570 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:24,642 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:24,669 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:33:25,152 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:33:33,982 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:39,111 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:33:39,112 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:33:48,735 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:48,788 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:50,496 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:50,547 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 10:33:50,653 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 10:33:51,458 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 10:33:51,460 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 10:34:04,501 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 10:34:04,505 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 10:34:38,171 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 10:34:46,838 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 10:34:47,830 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 10:34:49,873 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 10:34:51,485 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 10:34:53,355 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 10:34:55,498 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 10:34:57,559 - v7ai-fast.deepseek - INFO - AI call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash
+2026-08-14 10:34:57,576 - v7ai-fast.deepseek - INFO - AI attempt 1/3
+2026-08-14 10:35:26,674 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 10:36:03,319 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:02:47,030 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:02:49,361 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:05:47,129 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:05:47,207 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:05:47,237 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:05:47,852 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:05:47,853 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:06:03,155 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:06:03,156 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:06:24,366 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:06:24,475 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:06:24,529 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:06:26,336 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:06:48,712 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:06:52,036 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:06:52,119 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:06:52,148 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:06:52,831 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:07:14,435 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:07:14,436 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:09:01,235 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:01,316 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:01,343 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:09:02,420 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:09:14,789 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:14,855 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:16,885 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:16,950 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:09:17,064 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:09:17,664 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:09:17,784 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:09:25,084 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:09:25,085 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:09:41,566 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:09:41,571 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:10:08,991 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:10:11,302 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:10:12,569 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:10:14,109 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:10:17,797 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:10:18,984 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:10:34,002 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:34,089 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:34,120 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:10:35,043 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:10:35,142 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:10:56,506 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:56,557 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:56,631 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:10:58,355 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:58,423 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:10:58,539 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:10:59,469 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:10:59,589 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:11:00,103 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:11:00,192 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:11:00,224 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:11:00,867 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:11:00,947 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:11:17,667 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:11:17,671 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:11:25,652 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:11:25,654 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:11:40,636 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:11:46,865 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:11:47,555 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:11:49,062 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:14:40,630 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:14:42,991 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:16:58,663 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:16:58,741 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:16:58,769 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:16:59,401 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:17:22,428 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:17:25,825 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:25,904 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:25,935 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:17:27,226 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:17:36,729 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:36,804 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:38,657 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:38,726 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:17:38,834 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:17:40,126 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:17:40,327 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:17:55,150 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:17:55,152 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:18:00,164 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:18:00,168 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:18:32,500 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:18:33,964 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:18:35,911 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:18:58,931 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:18:59,015 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:18:59,043 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:19:00,878 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:19:01,090 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:19:16,821 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:16,878 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:18,653 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:18,715 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:18,825 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:19:20,553 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:19:20,906 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:19:29,112 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:19:32,674 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:32,758 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 11:19:32,788 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 11:19:34,468 - v7ai-fast - INFO - Skill DB sync: 2 records updated
+2026-08-14 11:19:34,825 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 11:19:43,123 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:19:43,127 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:19:57,811 - v7ai-fast.auth - INFO - User authenticated: smoke01
+2026-08-14 11:20:01,622 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 11:20:02,170 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 11:20:02,172 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 11:20:04,111 - v7ai-fast.deepseek - INFO - AI tools call: url=https://api.deepseek.com/v1/chat/completions, model=deepseek-v4-flash, tools=1
+2026-08-14 14:48:35,625 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:35,729 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:35,758 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 14:48:50,627 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:50,702 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:52,645 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:52,733 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:48:52,834 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 14:48:55,414 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.66.127.33", port 5432 failed: No route to host
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 14:48:55,415 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 14:48:56,813 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.66.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 14:48:56,814 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 14:49:23,500 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 14:49:26,591 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:49:26,681 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 14:49:26,762 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 14:49:26,763 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 14:49:26,711 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 14:49:47,762 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.66.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 14:49:47,763 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5

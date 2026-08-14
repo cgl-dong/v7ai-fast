@@ -11,6 +11,8 @@ from app.core.settings import settings
 from app.core.logging import logger
 from app.api.v1.endpoints.woa import router as woa_router
 from app.api.v1.endpoints.web import router as web_router
+from app.api.v1.endpoints.tool_chat import router as tool_router
+from app.api.v1.endpoints.llm_chat import router as llm_chat_router
 
 logger.info("v7ai-fast service starting...")
 
@@ -35,6 +37,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(woa_router, prefix="")
 app.include_router(web_router, prefix="")
+app.include_router(llm_chat_router, prefix="")
+app.include_router(tool_router, prefix="")
 
 
 @app.on_event("startup")
@@ -52,6 +56,9 @@ async def startup_event():
                 synced = sync_skill_definitions(db)
                 if synced:
                     logger.info(f"Skill DB sync: {synced} records updated")
+                # Load dynamic tools from DB into registry
+                from app.services.tools.dynamic import load_dynamic_tools_from_db
+                load_dynamic_tools_from_db(db)
             finally:
                 db.close()
         except Exception as e:

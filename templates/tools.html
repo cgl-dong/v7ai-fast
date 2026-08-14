@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v7ai-fast - Agent Tools</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; display: flex; background: #f5f7fa; }
+        .sidebar { width: 340px; background: #2d3748; color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid #4a5568; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h1 { font-size: 17px; }
+        .sidebar-header .sub { margin-top: 4px; font-size: 11px; opacity: 0.7; }
+        .add-btn { background: #667eea; color: white; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        .add-btn:hover { background: #5a6fd6; }
+        .nav { display: flex; gap: 8px; padding: 10px 12px; flex-wrap: wrap; }
+        .nav a { padding: 5px 11px; border-radius: 14px; background: #4a5568; color: #cbd5e0; text-decoration: none; font-size: 12px; transition: all 0.2s; }
+        .nav a:hover, .nav a.active { background: #667eea; color: white; }
+        .tools-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .tool-card { background: #3a4a63; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 2px solid transparent; transition: all 0.2s; }
+        .tool-card.selected { border-color: #667eea; }
+        .tool-card .tool-head { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .tool-card .tool-name { font-size: 14px; font-weight: 600; color: #a5b4fc; }
+        .tool-card .tool-type-badge { font-size: 10px; background: #805ad5; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+        .tool-card .tool-desc { font-size: 12px; color: #cbd5e0; margin-top: 6px; line-height: 1.5; }
+        .tool-card .tool-actions { display: flex; gap: 6px; margin-top: 10px; }
+        .tool-card .tool-actions button { font-size: 11px; padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-edit { background: #4299e1; color: white; }
+        .btn-test { background: #48bb78; color: white; }
+        .btn-del { background: #f56565; color: white; }
+        .btn-http { background: #805ad5; color: white; }
+        .tool-card .params { display: none; margin-top: 8px; background: #2d3748; border-radius: 6px; padding: 8px; font-family: monospace; font-size: 11px; color: #a0aec0; white-space: pre-wrap; word-break: break-all; max-height: 160px; overflow-y: auto; }
+        .tool-card.expanded .params { display: block; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .chat-header { background: white; padding: 14px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; }
+        .chat-header h2 { color: #333; font-size: 17px; }
+        .chat-header .badge { background: #eef2ff; color: #667eea; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 14px; animation: fadeIn 0.3s ease; white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-size: 14px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .user-message { background: #667eea; color: white; align-self: flex-end; }
+        .assistant-message { background: white; color: #333; align-self: flex-start; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .tool-trace { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; align-self: flex-start; border-radius: 10px; padding: 10px 14px; font-size: 12px; max-width: 85%; }
+        .tool-trace .tt-title { font-weight: 600; margin-bottom: 6px; }
+        .tool-trace .tt-step { margin: 4px 0; font-family: monospace; font-size: 11px; }
+        .tool-trace .tt-tool { color: #15803d; font-weight: 600; }
+        .tool-trace .tt-result { color: #166534; margin-top: 2px; word-break: break-all; }
+        .chat-input { background: white; padding: 14px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: center; }
+        .chat-input input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 24px; font-size: 15px; outline: none; }
+        .chat-input input:focus { border-color: #667eea; }
+        .chat-input button { padding: 12px 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 24px; font-size: 15px; cursor: pointer; }
+        .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 14px; padding: 24px; width: 92%; max-width: 640px; max-height: 88vh; overflow-y: auto; }
+        .modal h3 { margin-bottom: 16px; color: #333; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #555; font-size: 13px; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
+        .form-group textarea { resize: vertical; font-family: monospace; font-size: 12px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .modal-actions button { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #e2e8f0; color: #333; }
+        .btn-danger { background: #f56565; color: white; }
+        .hint { font-size: 11px; color: #888; margin-top: 4px; }
+        .param-item { display: grid; grid-template-columns: 1fr 100px 60px 1fr; gap: 6px; margin-bottom: 6px; align-items: center; }
+        .param-item input, .param-item select { padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+        .param-del { background: #f56565; color: white; border: none; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px; }
+        .loading::after { content: '...'; animation: dots 1.2s infinite; }
+        @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div>
+                <h1>🤖 Agent Tools</h1>
+                <div class="sub">Function Calling 工具调用</div>
+            </div>
+            <button class="add-btn" onclick="openCreateModal()">➕ 新增工具</button>
+        </div>
+        <div class="nav">
+            <a href="/chat">Chat</a>
+            <a href="/tool-playground" class="active">Tools</a>
+            <a href="/knowledge">Knowledge</a>
+            <a href="/admin">Admin</a>
+        </div>
+        <div class="tools-list" id="toolsList"><div style="color:#718096;font-size:13px;padding:10px;">加载工具列表...</div></div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            <h2>工具调用对话</h2>
+            <div class="badge" id="enabledBadge">已选 0 个工具</div>
+        </div>
+        <div class="chat-messages" id="messages">
+            <div class="assistant-message">你好！我是带工具调用能力的 Agent。左侧勾选要启用的工具，或点"新增工具"创建自己的工具（HTTP接口 / Python函数），然后向我提问。</div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="输入问题，例如：1024 乘以 8 等于多少？" autocomplete="off">
+            <button id="send-button">发送</button>
+        </div>
+    </div>
+
+    <!-- Create / Edit modal -->
+    <div class="modal-overlay" id="toolModal">
+        <div class="modal">
+            <h3 id="modalTitle">新增工具</h3>
+            <input type="hidden" id="toolId">
+            <div class="form-group">
+                <label>工具名称（唯一，英文/数字/下划线）</label>
+                <input type="text" id="fName" placeholder="例如: query_stock">
+            </div>
+            <div class="form-group">
+                <label>功能描述（决定模型何时选它，写清适用场景）</label>
+                <textarea id="fDesc" rows="2" placeholder="例如: 查询股票实时价格，当用户问股价时使用"></textarea>
+            </div>
+            <div class="form-group">
+                <label>工具类型</label>
+                <select id="fType" onchange="toggleType()">
+                    <option value="http">HTTP 接口调用（推荐，安全）</option>
+                    <option value="python">Python 函数（高级，任意代码）</option>
+                </select>
+            </div>
+
+            <div id="httpConfig">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>请求方法</label>
+                        <select id="fMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>超时(秒)</label>
+                        <input type="number" id="fTimeout" value="30">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>接口 URL（GET 参数自动拼 query，POST 参数为 JSON body）</label>
+                    <input type="text" id="fUrl" placeholder="例如: https://api.example.com/stock">
+                </div>
+                <div class="form-group">
+                    <label>自定义请求头（调内部受保护接口时填 Authorization 等）</label>
+                    <div id="headerList"></div>
+                    <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 12px;margin-top:6px;" onclick="addHeader()">+ 添加请求头</button>
+                </div>
+            </div>
+
+            <div id="pythonConfig" style="display:none;">
+                <div class="form-group">
+                    <label>Python 函数体（必须定义 run(**kwargs) 返回字符串）</label>
+                    <textarea id="fCode" rows="6" placeholder="def run(**kwargs):&#10;    a = kwargs.get('a')&#10;    return f'结果: {a * 2}'"></textarea>
+                    <div class="hint">⚠️ 任意代码执行风险，仅供可信环境使用</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>参数定义</label>
+                <div id="paramList"></div>
+                <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 12px;margin-top:6px;" onclick="addParam()">+ 添加参数</button>
+                <div class="hint">参数会转成 JSON Schema 传给模型，描述越详细选择越准</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn-danger" id="delBtn" style="display:none;" onclick="deleteTool()">删除</button>
+                <button class="btn-primary" onclick="saveTool()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test modal -->
+    <div class="modal-overlay" id="testModal">
+        <div class="modal">
+            <h3>测试工具 <span id="testToolName" style="color:#667eea;"></span></h3>
+            <div id="testArgs"></div>
+            <div style="margin-top:12px;background:#f7fafc;border-radius:8px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;" id="testResult">（结果将显示在这里）</div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeTestModal()">关闭</button>
+                <button class="btn-primary" onclick="runTest()">运行测试</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var selectedTools = new Set();
+        var currentSessionId = null;
+        var toolParams = [];  // [{name,type,required,desc}]
+        var toolHeaders = []; // [{key,value}]
+        var testToolId = null;
+
+        function authHeaders() {
+            var t = localStorage.getItem('token');
+            var h = { 'Content-Type': 'application/json' };
+            if (t) h['Authorization'] = 'Bearer ' + t;
+            return h;
+        }
+
+        // ── Load tools ──────────────────────────────
+        async function loadTools() {
+            try {
+                var r = await fetch('/api/tools', { headers: authHeaders() });
+                if (r.status === 401) { window.location.href = '/login'; return; }
+                var d = await r.json();
+                var list = document.getElementById('toolsList');
+                list.innerHTML = '';
+                d.tools.forEach(function(t) {
+                    var card = document.createElement('div');
+                    card.className = 'tool-card selected';
+                    card.dataset.name = t.name;
+                    var typeBadge = t.dynamic ? '<span class="tool-type-badge">自定义</span>' : '';
+                    card.innerHTML =
+                        '<div class="tool-head" onclick="toggleExpand(this)">' +
+                            '<div><span class="tool-name">⚡ ' + t.name + '</span>' + typeBadge + '</div>' +
+                            '<label onclick="event.stopPropagation()"><input type="checkbox" checked onchange="toggleSelect(\'' + t.name + '\', this.checked)"></label>' +
+                        '</div>' +
+                        '<div class="tool-desc">' + escapeHtml(t.description) + '</div>' +
+                        (t.dynamic ? '<div class="tool-actions">' +
+                            '<button class="btn-http" onclick="openEditTool(\'' + t.name + '\', event)">编辑</button>' +
+                            '<button class="btn-test" onclick="openTestTool(\'' + t.name + '\', event)">测试</button>' +
+                            '<button class="btn-del" onclick="deleteToolByName(\'' + t.name + '\', event)">删除</button>' +
+                        '</div>' : '') +
+                        '<div class="params">' + escapeHtml(JSON.stringify(t.parameters, null, 2)) + '</div>';
+                    list.appendChild(card);
+                    selectedTools.add(t.name);
+                });
+                updateBadge();
+            } catch(e) { console.error(e); }
+        }
+
+        function toggleSelect(name, checked) {
+            if (checked) selectedTools.add(name);
+            else selectedTools.delete(name);
+            updateBadge();
+        }
+        function toggleExpand(head) {
+            head.parentElement.classList.toggle('expanded');
+        }
+        function updateBadge() {
+            document.getElementById('enabledBadge').textContent = '已选 ' + selectedTools.size + ' 个工具';
+        }
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        // ── Modal: create / edit ────────────────────
+        function toggleType() {
+            var t = document.getElementById('fType').value;
+            document.getElementById('httpConfig').style.display = t === 'http' ? '' : 'none';
+            document.getElementById('pythonConfig').style.display = t === 'python' ? '' : 'none';
+        }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = '新增工具';
+            document.getElementById('toolId').value = '';
+            document.getElementById('fName').value = '';
+            document.getElementById('fDesc').value = '';
+            document.getElementById('fType').value = 'http';
+            document.getElementById('fMethod').value = 'GET';
+            document.getElementById('fUrl').value = '';
+            document.getElementById('fTimeout').value = '30';
+            document.getElementById('fCode').value = '';
+            document.getElementById('delBtn').style.display = 'none';
+            toolParams = [];
+            toolHeaders = [];
+            renderParams();
+            renderHeaders();
+            toggleType();
+            document.getElementById('toolModal').classList.add('active');
+        }
+
+        async function openEditTool(name, ev) {
+            if (ev) ev.stopPropagation();
+            var r = await fetch('/api/tools', { headers: authHeaders() });
+            var d = await r.json();
+            var t = d.tools.find(function(x) { return x.name === name; });
+            if (!t) return;
+            document.getElementById('modalTitle').textContent = '编辑工具';
+            document.getElementById('toolId').value = name;
+            document.getElementById('fName').value = t.name;
+            document.getElementById('fDesc').value = t.description;
+            document.getElementById('fType').value = t.dynamic === 'http' ? 'http' : 'http';
+            document.getElementById('delBtn').style.display = 'inline-block';
+            // load params from schema
+            toolParams = [];
+            var props = (t.parameters && t.parameters.properties) || {};
+            var required = (t.parameters && t.parameters.required) || [];
+            Object.keys(props).forEach(function(k) {
+                toolParams.push({ name: k, type: props[k].type || 'string', required: required.indexOf(k) >= 0, desc: props[k].description || '' });
+            });
+            renderParams();
+            // load headers (http tools only; python tools have none)
+            toolHeaders = [];
+            var cfg = t._config || {};
+            if (cfg.headers) {
+                Object.keys(cfg.headers).forEach(function(k) {
+                    toolHeaders.push({ key: k, value: cfg.headers[k] });
+                });
+            }
+            renderHeaders();
+            toggleType();
+            document.getElementById('toolModal').classList.add('active');
+        }
+
+        function renderParams() {
+            var list = document.getElementById('paramList');
+            list.innerHTML = '';
+            toolParams.forEach(function(p, i) {
+                var row = document.createElement('div');
+                row.className = 'param-item';
+                row.innerHTML =
+                    '<input placeholder="参数名" value="' + escapeHtml(p.name) + '" onchange="toolParams[' + i + '].name=this.value">' +
+                    '<select onchange="toolParams[' + i + '].type=this.value">' +
+                        '<option value="string"' + (p.type==='string'?' selected':'') + '>string</option>' +
+                        '<option value="number"' + (p.type==='number'?' selected':'') + '>number</option>' +
+                        '<option value="integer"' + (p.type==='integer'?' selected':'') + '>integer</option>' +
+                        '<option value="boolean"' + (p.type==='boolean'?' selected':'') + '>boolean</option>' +
+                    '</select>' +
+                    '<input type="checkbox" ' + (p.required?'checked':'') + ' title="必填" onchange="toolParams[' + i + '].required=this.checked">' +
+                    '<input placeholder="描述" value="' + escapeHtml(p.desc) + '" onchange="toolParams[' + i + '].desc=this.value">' +
+                    '<button class="param-del" onclick="toolParams.splice(' + i + ',1);renderParams()">✕</button>';
+                list.appendChild(row);
+            });
+        }
+
+        function addParam() {
+            toolParams.push({ name: '', type: 'string', required: false, desc: '' });
+            renderParams();
+        }
+
+        function renderHeaders() {
+            var list = document.getElementById('headerList');
+            list.innerHTML = '';
+            toolHeaders.forEach(function(hdr, i) {
+                var row = document.createElement('div');
+                row.className = 'param-item';
+                row.style.gridTemplateColumns = '1fr 2fr 40px';
+                row.innerHTML =
+                    '<input placeholder="Header 名" value="' + escapeHtml(hdr.key) + '" onchange="toolHeaders[' + i + '].key=this.value">' +
+                    '<input placeholder="值" value="' + escapeHtml(hdr.value) + '" onchange="toolHeaders[' + i + '].value=this.value">' +
+                    '<button class="param-del" onclick="toolHeaders.splice(' + i + ',1);renderHeaders()">✕</button>';
+                list.appendChild(row);
+            });
+        }
+
+        function addHeader() {
+            toolHeaders.push({ key: '', value: '' });
+            renderHeaders();
+        }
+
+        function buildSchema() {
+            var props = {}, required = [];
+            toolParams.forEach(function(p) {
+                if (!p.name) return;
+                props[p.name] = { type: p.type, description: p.desc || p.name };
+                if (p.required) required.push(p.name);
+            });
+            var schema = { type: 'object', properties: props };
+            if (required.length) schema.required = required;
+            return schema;
+        }
+
+        async function saveTool() {
+            var name = document.getElementById('fName').value.trim();
+            var desc = document.getElementById('fDesc').value.trim();
+            var type = document.getElementById('fType').value;
+            var id = document.getElementById('toolId').value;
+            if (!name || !desc) { alert('名称和描述必填'); return; }
+            var config = {};
+            if (type === 'http') {
+                config = {
+                    url: document.getElementById('fUrl').value.trim(),
+                    method: document.getElementById('fMethod').value,
+                    timeout: parseFloat(document.getElementById('fTimeout').value) || 30
+                };
+                var hdrs = {};
+                toolHeaders.forEach(function(h) {
+                    if (h.key && h.value) hdrs[h.key.trim()] = h.value;
+                });
+                if (Object.keys(hdrs).length) config.headers = hdrs;
+                if (!config.url) { alert('HTTP 工具需要填 URL'); return; }
+            } else {
+                config = { code: document.getElementById('fCode').value };
+                if (!config.code.trim()) { alert('Python 工具需要填代码'); return; }
+            }
+            var body = { name: name, description: desc, tool_type: type, parameters: buildSchema(), config: config };
+            var url, method;
+            if (id) { url = '/api/tools/' + encodeURIComponent(id); method = 'PUT'; }
+            else { url = '/api/tools'; method = 'POST'; }
+            var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
+            var d = await r.json();
+            if (!r.ok) { alert('保存失败: ' + (d.detail || r.status)); return; }
+            closeModal();
+            loadTools();
+        }
+
+        async function deleteToolByName(name, ev) {
+            if (ev) ev.stopPropagation();
+            if (!confirm('确定删除工具 ' + name + ' 吗？')) return;
+            var r = await fetch('/api/tools/' + encodeURIComponent(name), { method: 'DELETE', headers: authHeaders() });
+            if (r.ok) { loadTools(); } else { alert('删除失败'); }
+        }
+
+        async function deleteTool() {
+            var name = document.getElementById('toolId').value;
+            if (!confirm('确定删除工具 ' + name + ' 吗？')) return;
+            var r = await fetch('/api/tools/' + encodeURIComponent(name), { method: 'DELETE', headers: authHeaders() });
+            if (r.ok) { closeModal(); loadTools(); } else { alert('删除失败'); }
+        }
+
+        function closeModal() { document.getElementById('toolModal').classList.remove('active'); }
+
+        // ── Test modal ──────────────────────────────
+        async function openTestTool(name, ev) {
+            if (ev) ev.stopPropagation();
+            testToolId = name;
+            document.getElementById('testToolName').textContent = name;
+            // build args inputs from schema
+            var r = await fetch('/api/tools', { headers: authHeaders() });
+            var d = await r.json();
+            var t = d.tools.find(function(x) { return x.name === name; });
+            var box = document.getElementById('testArgs');
+            box.innerHTML = '';
+            var props = (t && t.parameters && t.parameters.properties) || {};
+            Object.keys(props).forEach(function(k) {
+                var row = document.createElement('div');
+                row.className = 'form-group';
+                row.innerHTML = '<label>' + escapeHtml(k) + '（' + (props[k].type||'string') + '）</label>' +
+                    '<input data-arg="' + k + '" placeholder="' + escapeHtml(props[k].description || '') + '">';
+                box.appendChild(row);
+            });
+            document.getElementById('testResult').textContent = '（输入参数后点运行测试）';
+            document.getElementById('testModal').classList.add('active');
+        }
+
+        async function runTest() {
+            var args = {};
+            document.querySelectorAll('#testArgs input[data-arg]').forEach(function(inp) {
+                var v = inp.value;
+                if (inp.placeholder && v === '') return; // skip empty optional
+                args[inp.dataset.arg] = v;
+            });
+            document.getElementById('testResult').textContent = '运行中...';
+            var r = await fetch('/api/tools/' + encodeURIComponent(testToolId) + '/test', {
+                method: 'POST', headers: authHeaders(), body: JSON.stringify({ args: args })
+            });
+            var d = await r.json();
+            document.getElementById('testResult').textContent = r.ok ? (d.result || '（无结果）') : ('错误: ' + (d.detail || r.status));
+        }
+
+        function closeTestModal() { document.getElementById('testModal').classList.remove('active'); }
+
+        // ── Send message ────────────────────────────
+        async function sendMessage() {
+            var input = document.getElementById('message-input');
+            var message = input.value.trim();
+            if (!message) return;
+            input.value = '';
+            document.getElementById('send-button').disabled = true;
+
+            var um = document.createElement('div');
+            um.className = 'message user-message';
+            um.textContent = message;
+            document.getElementById('messages').appendChild(um);
+
+            var am = document.createElement('div');
+            am.className = 'message assistant-message';
+            am.textContent = '思考中';
+            am.classList.add('loading');
+            document.getElementById('messages').appendChild(am);
+            scrollBottom();
+
+            try {
+                var resp = await fetch('/api/chat/tool', {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ message: message, session_id: currentSessionId, tools: Array.from(selectedTools) })
+                });
+                var d = await resp.json();
+                if (!resp.ok) throw new Error(d.detail || '请求失败');
+                currentSessionId = d.session_id;
+
+                if (d.tool_trace && d.tool_trace.length) {
+                    var tt = document.createElement('div');
+                    tt.className = 'tool-trace';
+                    var html = '<div class="tt-title">🔧 工具调用过程</div>';
+                    d.tool_trace.forEach(function(step) {
+                        html += '<div class="tt-step">→ 调用 <span class="tt-tool">' + escapeHtml(step.tool) + '</span>(' + escapeHtml(JSON.stringify(step.args)) + ')</div>';
+                        html += '<div class="tt-result">' + escapeHtml(step.result) + '</div>';
+                    });
+                    tt.innerHTML = html;
+                    document.getElementById('messages').insertBefore(tt, am);
+                }
+
+                am.classList.remove('loading');
+                am.textContent = d.response || '（无回答）';
+            } catch(e) {
+                am.classList.remove('loading');
+                am.textContent = '❌ 错误: ' + e.message;
+            }
+            document.getElementById('send-button').disabled = false;
+            scrollBottom();
+        }
+
+        function scrollBottom() {
+            var m = document.getElementById('messages');
+            m.scrollTop = m.scrollHeight;
+        }
+
+        document.getElementById('send-button').onclick = sendMessage;
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        loadTools();
+    </script>
+</body>
+</html>

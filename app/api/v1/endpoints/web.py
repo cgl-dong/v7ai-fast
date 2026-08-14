@@ -522,6 +522,19 @@ async def chat_page(
     return HTMLResponse(content=html_content)
 
 
+@router.get("/tool-playground", response_class=HTMLResponse)
+async def tool_playground_page(
+    request: Request,
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """Tool playground page — browse tools and chat with function calling."""
+    if not user:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/login", status_code=302)
+    with open('templates/tools.html', 'r', encoding='utf-8') as f:
+        return HTMLResponse(content=f.read())
+
+
 @router.get("/api/get-sessions")
 async def get_sessions(
     request: Request,

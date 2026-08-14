@@ -121,6 +121,38 @@ class AIService:
             result = response.json()
             return result["choices"][0]["message"]["content"]
 
+    async def call_model_with_tools(self, messages: List[dict], tools: List[dict],
+                                    temperature: float = 0.1) -> dict:
+        """Call AI model with tools (OpenAI function calling).
+
+        Returns the full assistant message dict, which may contain:
+          - "content": natural language answer (no tool call)
+          - "tool_calls": [{id, type, function: {name, arguments}}]
+        temperature is set low (0.1) for precise tool selection/params.
+        """
+        if not self.api_key:
+            raise RuntimeError("API key not configured")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        data = {
+            "model": self.model,
+            "temperature": temperature,
+            "messages": messages,
+            "tools": tools,
+        }
+
+        logger.info(f"AI tools call: url={self.api_url}, model={self.model}, tools={len(tools)}")
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(self.api_url, headers=headers, json=data)
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]
+
     async def call_model_stream(self, question: str) -> "AsyncGenerator[str, None]":
         """Stream AI response token by token via SSE (server-sent events).
 

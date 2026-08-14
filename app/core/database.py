@@ -249,6 +249,26 @@ class TraceRating(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
+class ToolDefinition(Base):
+    """动态注册的 Agent 工具 — 页面可新增/编辑/删除。
+
+    tool_type: http (配置化HTTP调用) | python (Python函数代码)
+    config: JSON — http: {url, method, headers} ; python: {code}
+    """
+    __tablename__ = "tool_definitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True, comment="工具名称(唯一)")
+    description = Column(String(1000), nullable=False, comment="工具功能描述")
+    parameters = Column(Text, nullable=False, comment="参数JSON Schema")
+    tool_type = Column(String(20), default="http", comment="工具类型: http / python")
+    config = Column(Text, comment="工具配置JSON: http->{url,method,headers} ; python->{code}")
+    is_active = Column(Boolean, default=True, comment="是否启用")
+    created_by = Column(String(100), comment="创建人")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 # -- Helpers ---------------------------------------------------------
 
 def init_db():
