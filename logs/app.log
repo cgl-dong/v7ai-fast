@@ -2241,3 +2241,24 @@ WHERE skill_definitions.name = %(name_1)s
 
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
 2026-08-14 14:49:47,763 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 14:50:26,903 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 14:50:26,905 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 16:13:14,219 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 16:13:14,376 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 16:13:14,451 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 16:13:35,510 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.66.127.33", port 5432 failed: Connection timed out (0x0000274C/10060)
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 16:13:35,511 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 16:14:14,760 - v7ai-fast.embedding - INFO - Embedding model loaded, dim=768
+2026-08-14 16:14:14,761 - v7ai-fast - INFO - Embedding model preloaded: dim=768
+2026-08-14 16:16:27,568 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 16:16:27,728 - v7ai-fast - INFO - v7ai-fast service starting...
+2026-08-14 16:16:27,886 - v7ai-fast - INFO - Skill discovery: 3 skills found
+2026-08-14 16:16:29,289 - v7ai-fast - WARNING - Skill discovery/sync failed (non-fatal): (psycopg2.OperationalError) connection to server at "10.66.127.33", port 5432 failed: No route to host
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-14 16:16:29,291 - v7ai-fast.embedding - INFO - Loading embedding model: BAAI/bge-base-zh-v1.5
+2026-08-14 16:16:56,036 - v7ai-fast - WARNING - Failed to preload embedding model (will lazy-load on first use): [Errno 32] Broken pipe

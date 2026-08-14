@@ -121,6 +121,53 @@ class AIService:
             result = response.json()
             return result["choices"][0]["message"]["content"]
 
+    async def call_model_with_tools_stream(self, messages: List[dict], tools: List[dict],
+                                            temperature: float = 0.7):
+        """Streaming version of call_model_with_tools. Yields delta dicts:
+
+        Yields:
+            dict: {"type": "content", "text": "..."} or {"type": "tool_call", "tool_call": {...}}
+        """
+        if not self.api_key:
+            raise RuntimeError("API key not configured")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        data = {
+            "model": self.model,
+            "temperature": temperature,
+            "messages": messages,
+            "tools": tools,
+            "stream": True,
+        }
+
+        logger.info(f"[tool_call_stream] calling model with {len(tools)} tools: {[t['function']['name'] for t in tools]}")
+
+        import json
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
+            async with client.stream("POST", self.api_url, headers=headers, json=data) as response:
+                if response.status_code >= 400:
+                    body = await response.aread()
+                    raise RuntimeError(f"AI stream error {response.status_code}: {body[:300]}")
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        chunk = line[6:]
+                        if chunk == "[DONE]":
+                            return
+                        try:
+                            obj = json.loads(chunk)
+                            delta = obj["choices"][0].get("delta", {})
+                            if "content" in delta and delta["content"]:
+                                yield {"type": "content", "text": delta["content"]}
+                            if "tool_calls" in delta:
+                                for tc in delta["tool_calls"]:
+                                    yield {"type": "tool_call", "tool_call": tc}
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+
     async def call_model_with_tools(self, messages: List[dict], tools: List[dict],
                                     temperature: float = 0.1) -> dict:
         """Call AI model with tools (OpenAI function calling).
@@ -145,13 +192,22 @@ class AIService:
             "tools": tools,
         }
 
-        logger.info(f"AI tools call: url={self.api_url}, model={self.model}, tools={len(tools)}")
+        tool_names = [t.get("function", {}).get("name", "?") for t in tools]
+        logger.info(f"[tool_call] model={self.model}, tools={len(tools)}: {tool_names}")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(self.api_url, headers=headers, json=data)
             response.raise_for_status()
             result = response.json()
-            return result["choices"][0]["message"]
+            msg = result["choices"][0]["message"]
+
+            has_tool_calls = bool(msg.get("tool_calls"))
+            has_content = bool(msg.get("content"))
+            tool_names = [tc.get("function", {}).get("name", "?") for tc in msg.get("tool_calls", [])]
+            logger.info(f"[tool_call] response: content={has_content} ({len(msg.get('content','') or '')} chars), "
+                        f"tool_calls={has_tool_calls} ({len(msg.get('tool_calls', []))} calls {tool_names})")
+
+            return msg
 
     async def call_model_stream(self, question: str) -> "AsyncGenerator[str, None]":
         """Stream AI response token by token via SSE (server-sent events).

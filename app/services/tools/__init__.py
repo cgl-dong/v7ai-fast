@@ -12,6 +12,7 @@ import logging
 from app.services.tools.base import BaseTool, ToolRegistry, registry
 from app.services.tools.calculator import calculator_tool
 from app.services.tools.web_search import web_search_tool
+from app.services.tools.qcc import qcc_tool
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 _ALL_TOOLS: list = [
     calculator_tool,
     web_search_tool,
+    qcc_tool,
 ]
 
 for _tool in _ALL_TOOLS:

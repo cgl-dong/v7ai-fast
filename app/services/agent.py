@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import time
 from typing import TypedDict, List, Optional, Literal, Annotated
 
 from langgraph.graph import StateGraph, END
@@ -14,6 +15,7 @@ from app.services.observability import Tracer
 from app.services.judge import evaluate_agent_response
 from app.services.web_search import WebSearch
 from app.core.settings import settings
+from app.services.tools import registry, all_tool_schemas, execute_tool
 
 logger = logging.getLogger(__name__)
 
@@ -416,60 +418,203 @@ class RAGAgent:
         self._last_node_name = node_name
 
         history = _format_history(state.get("messages", []))
-
-        # If conversation is long, also add a summary for overscroll context
         all_msgs = state.get("messages", [])
         if len(all_msgs) > 6:
-            summary = await _summarize_history(self.ai, all_msgs[:-4])  # Summarize older messages
+            summary = await _summarize_history(self.ai, all_msgs[:-4])
             if summary:
                 history = f"[对话背景摘要]\n{summary}\n\n{history}"
 
+        # ── Build system prompt ────────────────────────────────────
         if has_context:
-            # Detect if web search results are present in context
             has_web = bool(state.get("web_results"))
             if has_web:
-                prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
+                system_prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
 
-{history}参考信息:
+参考信息:
 {context}
-
-用户问题: {question}
 
 要求:
 - 优先使用企业知识库内容回答内部业务问题
 - 使用网络搜索结果回答实时/时效性问题
 - 综合两类信息时说明信息来源
 - 信息不足时如实说明
-- 用中文，简洁专业"""
-            else:
-                prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
+- 用中文，简洁专业
 
-{history}知识库内容:
+如果问题需要调用工具（如：查询公司信息、联网搜索、数学计算），请直接调用对应工具获取数据后再回答。"""
+            else:
+                system_prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答用户问题。
+
+知识库内容:
 {context}
 
-用户问题: {question}
+要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。
 
-要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。"""
-            logger.info(f"[{node_name}] RAG mode, history={len(state.get('messages', []))}msgs, "
-                        f"context={len(context)} chars, prompt={len(prompt)} chars")
+如果知识库内容不足以回答问题，可以调用工具（如：查询公司信息、联网搜索、数学计算）获取补充数据。"""
         else:
-            prompt = f"{history}问题: {question}\n\n用中文简洁回答。"
-            logger.info(f"[{node_name}] direct mode, history={len(state.get('messages', []))}msgs, "
-                        f"prompt={len(prompt)} chars")
+            system_prompt = "你是一个智能助手，用中文简洁回答用户问题。如果问题需要调用工具（如：查询公司信息、联网搜索、数学计算），请直接调用工具获取数据后再回答。"
+
+        logger.info(f"[{node_name}] RAG={'yes' if has_context else 'no'}, "
+                    f"history={len(state.get('messages', []))} msgs, "
+                    f"context={len(context)} chars, tools={len(registry.names())}")
 
         with self.tracer.trace(node_name, self.session_id, "agent_node", self.model_name,
                                {"has_context": has_context}) as ctx:
             self._last_trace_id = ctx.trace_id
             ctx.input = question[:200]
             try:
-                logger.debug(f"[{node_name}] calling LLM (model={self.model_name})")
-                answer = await self.ai.call_model(prompt)
+                answer = await self._tool_call_loop(system_prompt, question, history, ctx)
                 ctx.output = answer[:500]
                 logger.info(f"[{node_name}] answer generated: {len(answer)} chars")
                 return {"answer": answer}
             except Exception as e:
                 logger.error(f"[{node_name}] error: {e}")
                 return {"answer": f"生成回答出错: {e}", "error": str(e)}
+
+    async def _tool_call_loop(self, system_prompt: str, question: str, history: str, ctx) -> str:
+        """RAG context + Tool Calling 混合循环。
+
+        流程（参考 Day3 RAG+Function Calling 混合 Agent）：
+        1. 注入 RAG 上下文 + tools 到 system prompt
+        2. 调用模型，模型判断是否需要工具
+        3. 如果需要工具 → 执行工具 → 结果回填 messages → 回到步骤2
+        4. 如果不需要工具 → 返回最终回答
+
+        最多 3 轮工具调用，防止无限循环。
+        """
+        tools = all_tool_schemas()
+        if not tools:
+            logger.info(f"[tool_loop] no tools registered, direct answer")
+            prompt = f"{history}{system_prompt}\n\n用户问题: {question}\n\n请用中文回答。"
+            return await self.ai.call_model(prompt)
+
+        tool_names = [t["function"]["name"] for t in tools]
+        logger.info(f"[tool_loop] start: question={question[:80]}..., "
+                    f"tools={len(tools)}: {tool_names}, "
+                    f"history={len(history)} chars, system_prompt={len(system_prompt)} chars")
+
+        # Build messages for tool-aware API
+        messages = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if history:
+            messages.append({"role": "system", "content": history})
+        messages.append({"role": "user", "content": question})
+
+        max_rounds = 3
+        total_tool_calls = 0
+
+        for round_num in range(1, max_rounds + 1):
+            t0 = time.time()
+            logger.info(f"[tool_loop] round {round_num}/{max_rounds} → calling model with {len(messages)} messages")
+
+            ctx.metadata[f"round_{round_num}_start"] = True
+            ctx.metadata[f"round_{round_num}_msg_count"] = len(messages)
+
+            try:
+                response = await self.ai.call_model_with_tools(messages, tools, temperature=0.1)
+            except Exception as e:
+                logger.error(f"[tool_loop] round {round_num} model call failed: {e}")
+                # Fallback: try direct answer without tools
+                prompt = f"{system_prompt}\n\n{history}用户问题: {question}\n\n用中文简洁回答。"
+                return await self.ai.call_model(prompt)
+
+            elapsed = time.time() - t0
+            content = response.get("content", "")
+            tool_calls = response.get("tool_calls", [])
+
+            ctx.metadata[f"round_{round_num}_model_elapsed"] = f"{elapsed:.1f}s"
+            ctx.metadata[f"round_{round_num}_has_content"] = bool(content)
+            ctx.metadata[f"round_{round_num}_tool_calls"] = len(tool_calls)
+
+            logger.info(f"[tool_loop] round {round_num} response: content={len(content)} chars, "
+                        f"tool_calls={len(tool_calls)}, elapsed={elapsed:.1f}s")
+
+            if not tool_calls:
+                # No tool calls → model gave final answer
+                logger.info(f"[tool_loop] round {round_num} no tool_calls → final answer ({len(content)} chars)")
+                if content:
+                    return content
+                # If no content either, ask model to summarize
+                messages.append({"role": "user", "content": "请总结你的回答。"})
+                continue
+
+            # ── Execute tools ──────────────────────────────────────────
+            # Add assistant message with tool_calls
+            messages.append({
+                "role": "assistant",
+                "content": content or "",
+                "tool_calls": tool_calls,
+            })
+
+            ctx.metadata[f"round_{round_num}_tool_details"] = []
+            for tc in tool_calls:
+                fn_name = tc.get("function", {}).get("name", "unknown")
+                fn_args_str = tc.get("function", {}).get("arguments", "{}")
+                tc_id = tc.get("id", "")
+
+                logger.info(f"[tool_loop] round {round_num} executing tool: {fn_name}, args={fn_args_str[:200]}")
+
+                try:
+                    fn_args = json.loads(fn_args_str)
+                except json.JSONDecodeError:
+                    fn_args = {}
+
+                t_tool = time.time()
+                result_text = await self._execute_tool_async(fn_name, **fn_args)
+                tool_elapsed = time.time() - t_tool
+
+                total_tool_calls += 1
+                logger.info(f"[tool_loop] round {round_num} tool '{fn_name}' done: "
+                            f"result={len(result_text)} chars, elapsed={tool_elapsed:.1f}s")
+                logger.debug(f"[tool_loop] round {round_num} tool '{fn_name}' result: {result_text[:500]}")
+
+                ctx.metadata[f"round_{round_num}_tool_details"].append({
+                    "name": fn_name,
+                    "args": fn_args_str[:200],
+                    "result_len": len(result_text),
+                    "elapsed": f"{tool_elapsed:.1f}s",
+                })
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc_id,
+                    "content": result_text,
+                })
+
+            ctx.metadata[f"round_{round_num}_total_tool_elapsed"] = f"{time.time() - t0:.1f}s"
+
+            if round_num == max_rounds:
+                logger.info(f"[tool_loop] max rounds ({max_rounds}) reached, forcing final answer")
+                messages.append({"role": "user", "content": "请基于以上工具调用结果，用中文简洁回答原始问题。"})
+
+        # Final call without tools to get conversational answer
+        logger.info(f"[tool_loop] final call: {total_tool_calls} total tool calls in {max_rounds} rounds")
+        t_final = time.time()
+        final_response = await self.ai.call_model_with_tools(messages, tools, temperature=0.1)
+        final_content = final_response.get("content", "")
+        # If still tool_calls, force simple answer
+        if final_response.get("tool_calls"):
+            logger.warning(f"[tool_loop] final response still has tool_calls, forcing direct answer")
+            messages.append({"role": "user", "content": "请直接回答，不要再调用工具。"})
+            final_content = await self.ai.call_model(
+                f"{system_prompt}\n\n用户问题: {question}\n\n请用中文简洁回答。"
+            )
+
+        logger.info(f"[tool_loop] final answer: {len(final_content)} chars, "
+                    f"total_elapsed={time.time() - t0 + 0.1:.1f}s")
+        return final_content
+
+    async def _execute_tool_async(self, name: str, **kwargs) -> str:
+        """Execute a tool by name asynchronously. Returns result text."""
+        tool = registry.get(name)
+        if tool is None:
+            logger.warning(f"[tool_loop] tool '{name}' not found in registry")
+            return f"错误：工具 '{name}' 不存在"
+        try:
+            return await tool.execute(**kwargs)
+        except Exception as e:
+            logger.error(f"[tool_loop] tool '{name}' execute error: {e}")
+            return f"工具执行失败：{str(e)}"
 
     async def run(self, message: str, chat_history: List[dict] = None, use_kb: bool = True, kb_id: int = None, use_web: bool = True) -> str:
         """Main entry point: question → graph → answer.
@@ -567,7 +712,7 @@ class RAGAgent:
 
         Uses classify+retrieve (non-streaming, fast), then streams the generate step.
         """
-        import time, asyncio
+        import time
         t0 = time.time()
         messages_list = chat_history or []
         logger.info(f"[agent-stream] start: use_kb={use_kb}, use_web={use_web}, kb_id={kb_id}, session={self.session_id}")
@@ -614,7 +759,8 @@ class RAGAgent:
 
         self._last_sources = kb_results or web_results
 
-        # ── Generate (streaming) ──
+        # ── Generate (streaming + tool calling) ──
+        # Build system prompt (same as _generate_node)
         if context:
             has_web = bool(web_results)
             history = _format_history(messages_list)
@@ -624,37 +770,54 @@ class RAGAgent:
                 if summary:
                     history = f"[对话背景摘要]\n{summary}\n\n{history}"
             if has_web:
-                prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
+                system_prompt = f"""你是一个智能助手，整合了企业知识库和网络搜索结果来回答用户问题。
 
-{history}参考信息:
+参考信息:
 {context}
-
-用户问题: {message}
 
 要求:
 - 优先使用企业知识库内容回答内部业务问题
 - 使用网络搜索结果回答实时/时效性问题
 - 综合两类信息时说明信息来源
 - 信息不足时如实说明
-- 用中文，简洁专业"""
-            else:
-                prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答。
+- 用中文，简洁专业
 
-{history}知识库内容:
+如果问题需要调用工具（如：查询公司信息、联网搜索、数学计算），请直接调用对应工具获取数据后再回答。"""
+            else:
+                system_prompt = f"""你是一个企业知识库助手。请基于以下知识库内容回答用户问题。
+
+知识库内容:
 {context}
 
-用户问题: {message}
+要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。
 
-要求: 基于知识库回答，信息不足时如实说明。用中文，简洁专业。"""
+如果知识库内容不足以回答问题，可以调用工具（如：查询公司信息、联网搜索、数学计算）获取补充数据。"""
         else:
             history = _format_history(messages_list)
-            prompt = f"{history}问题: {message}\n\n用中文简洁回答。"
+            system_prompt = "你是一个智能助手，用中文简洁回答用户问题。如果问题需要调用工具（如：查询公司信息、联网搜索、数学计算），请直接调用工具获取数据后再回答。"
 
+        logger.info(f"[agent-stream] RAG={'yes' if context else 'no'}, "
+                    f"context={len(context)} chars, tools={len(registry.names())}")
+
+        # ── Tool calling loop (non-streaming, then stream the result) ──
         full_answer = ""
         try:
-            async for token in self.ai.call_model_stream(prompt):
-                full_answer += token
-                yield token
+            # Run tool calling loop to get final answer
+            with self.tracer.trace("generate_stream", self.session_id, "agent_node", self.model_name,
+                                   {"has_context": bool(context)}) as ctx:
+                self._last_trace_id = ctx.trace_id
+                self._last_node_name = "generate_with_docs" if context else "generate_direct"
+                ctx.input = message[:200]
+
+                final_answer = await self._tool_call_loop(system_prompt, message, history, ctx)
+                ctx.output = final_answer[:500]
+
+            # Yield the answer (simulate streaming by yielding in chunks)
+            full_answer = final_answer
+            chunk_size = 10  # characters per chunk for streaming feel
+            for i in range(0, len(final_answer), chunk_size):
+                yield final_answer[i:i + chunk_size]
+                await asyncio.sleep(0.01)  # small delay for streaming effect
         except Exception as e:
             logger.error(f"[agent-stream] error: {e}")
             yield f"\n[流式输出中断: {e}]"

@@ -117,7 +117,9 @@
             </div>
         </div>
         <div class="chat-input">
-            <button class="mode-btn" id="modeBtn" onclick="toggleMode()" title="切换对话模式">💬 自由对话</button>
+            <button class="mode-btn active" id="freeModeBtn" onclick="setMode('free')" title="流式对话">💬 自由对话</button>
+            <button class="mode-btn" id="planModeBtn" onclick="setMode('plan')" title="任务规划">🧩 Plan模式</button>
+            <button class="mode-btn" id="jsonModeBtn" onclick="setMode('json')" title="JSON结构化输出">📋 JSON输出</button>
             <input type="text" id="promptInput" placeholder="输入你的问题..." autofocus>
             <button id="sendBtn" onclick="sendMessage()">发送</button>
             <div class="schema-area" id="schemaArea">
@@ -128,6 +130,9 @@
                     <button onclick="setSchema('product')" title="商品列表">🛒 商品</button>
                 </div>
             </div>
+        </div>
+        <div class="plan-status" id="planStatus" style="display:none;background:#f0f4ff;padding:10px 20px;font-size:13px;color:#4a5568;border-top:1px solid #e2e8f0;">
+            <span id="planStatusText"></span>
         </div>
     </div>
 
@@ -144,15 +149,51 @@
         const messagesDiv = document.getElementById('messages');
         const promptInput = document.getElementById('promptInput');
         const sendBtn = document.getElementById('sendBtn');
-        const modeBtn = document.getElementById('modeBtn');
+        const modeBtns = {
+            free: document.getElementById('freeModeBtn'),
+            plan: document.getElementById('planModeBtn'),
+            json: document.getElementById('jsonModeBtn'),
+        };
         const schemaArea = document.getElementById('schemaArea');
         const schemaInput = document.getElementById('schemaInput');
+        const planStatus = document.getElementById('planStatus');
+        const planStatusText = document.getElementById('planStatusText');
         let emptyState = document.getElementById('emptyState');
         let isStreaming = false;
         let currentSessionId = null;
-        let jsonMode = false;
+        let currentMode = 'free';  // 'free' | 'plan' | 'json'
 
         // ── 模式切换 ──────────────────────────────────────
+        function setMode(mode) {
+            currentMode = mode;
+            // 更新按钮状态
+            Object.keys(modeBtns).forEach(function(k) {
+                modeBtns[k].classList.toggle('active', k === mode);
+            });
+            // 更新 UI
+            if (mode === 'json') {
+                schemaArea.classList.add('show');
+                promptInput.placeholder = '描述你需要提取的数据...';
+                if (!schemaInput.value) setSchema('order');
+                planStatus.style.display = 'none';
+            } else if (mode === 'plan') {
+                schemaArea.classList.remove('show');
+                promptInput.placeholder = '描述复杂任务，如：先计算(100+25)*4，再查询什么是RAG，最后汇总...';
+                planStatus.style.display = 'none';
+            } else {
+                schemaArea.classList.remove('show');
+                promptInput.placeholder = '输入你的问题...';
+                planStatus.style.display = 'none';
+            }
+        }
+
+        function setSchema(type) {
+            var preset = SCHEMA_PRESETS[type];
+            if (preset) {
+                schemaInput.value = JSON.stringify(preset, null, 2);
+            }
+        }
+
         var SCHEMA_PRESETS = {
             order: {
                 type: 'object',
@@ -198,29 +239,6 @@
                 }
             }
         };
-
-        function toggleMode() {
-            jsonMode = !jsonMode;
-            if (jsonMode) {
-                modeBtn.textContent = '📋 JSON输出';
-                modeBtn.classList.add('active');
-                schemaArea.classList.add('show');
-                promptInput.placeholder = '描述你需要提取的数据...';
-                if (!schemaInput.value) setSchema('order');
-            } else {
-                modeBtn.textContent = '💬 自由对话';
-                modeBtn.classList.remove('active');
-                schemaArea.classList.remove('show');
-                promptInput.placeholder = '输入你的问题...';
-            }
-        }
-
-        function setSchema(type) {
-            var preset = SCHEMA_PRESETS[type];
-            if (preset) {
-                schemaInput.value = JSON.stringify(preset, null, 2);
-            }
-        }
 
         // ── localStorage 会话持久化 ──────────────────────────
         const STORAGE_KEY = 'llm_chat_sessions';
@@ -313,11 +331,16 @@
             var prompt = promptInput.value.trim();
             if (!prompt || isStreaming) return;
 
-            if (jsonMode) {
+            if (currentMode === 'json') {
                 await sendJsonMessage(prompt);
                 return;
             }
+            if (currentMode === 'plan') {
+                await sendPlanMessage(prompt);
+                return;
+            }
 
+            // Free chat mode (SSE streaming)
             isStreaming = true;
             sendBtn.disabled = true;
             promptInput.value = '';
@@ -439,6 +462,127 @@
                 sendBtn.disabled = false;
                 promptInput.focus();
             }
+        }
+
+        // ── Plan 模式：任务规划 Agent ──────────────────────
+        async function sendPlanMessage(prompt) {
+            isStreaming = true;
+            sendBtn.disabled = true;
+            promptInput.value = '';
+
+            if (!currentSessionId) {
+                currentSessionId = 'session_' + Date.now();
+            }
+
+            var now = Date.now();
+            addMessage('user', prompt, false, now);
+
+            var msgs = getCurrentMessages();
+            msgs.push({ role: 'user', content: prompt, time: now });
+            saveCurrentMessages(msgs);
+
+            // 显示状态栏
+            planStatus.style.display = 'block';
+            planStatusText.textContent = '🧩 正在规划任务...';
+
+            var assistantMsg = addMessage('assistant', '', true);
+            assistantMsg.innerHTML = '<em>正在拆解任务并执行...</em>';
+
+            try {
+                var response = await fetch('/llm/chat/plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt, chat_history: [] })
+                });
+                var result = await response.json();
+
+                if (!response.ok) {
+                    planStatus.style.display = 'none';
+                    assistantMsg.classList.remove('streaming');
+                    assistantMsg.innerHTML = '错误: ' + escapeHtml(result.detail || '未知错误');
+                    isStreaming = false;
+                    sendBtn.disabled = false;
+                    promptInput.focus();
+                    return;
+                }
+
+                // 构建 Plan 模式专用展示
+                var html = buildPlanResultHtml(result);
+                planStatus.style.display = 'none';
+                assistantMsg.classList.remove('streaming');
+                assistantMsg.innerHTML = html;
+
+                var now2 = Date.now();
+                var timeDiv = document.createElement('div');
+                timeDiv.className = 'msg-time';
+                timeDiv.textContent = new Date(now2).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                assistantMsg.appendChild(timeDiv);
+
+                msgs = getCurrentMessages();
+                msgs.push({ role: 'assistant', content: result.final_answer || '', time: now2 });
+                saveCurrentMessages(msgs);
+            } catch (err) {
+                planStatus.style.display = 'none';
+                assistantMsg.classList.remove('streaming');
+                assistantMsg.textContent = '请求失败: ' + err.message;
+            } finally {
+                isStreaming = false;
+                sendBtn.disabled = false;
+                promptInput.focus();
+            }
+        }
+
+        function buildPlanResultHtml(result) {
+            var html = '';
+
+            // 任务计划
+            if (result.task_list && result.task_list.length > 0) {
+                html += '<div style="margin-bottom:12px;padding:10px;background:#f0f4ff;border-radius:8px;font-size:13px;">';
+                html += '<strong>📋 任务计划 (' + result.task_list.length + ' 个子任务)</strong>';
+                html += '<table style="width:100%;margin-top:6px;border-collapse:collapse;font-size:12px;">';
+                html += '<tr style="background:#e2e8ff;"><th style="padding:4px 8px;text-align:left;">ID</th><th style="padding:4px 8px;text-align:left;">类型</th><th style="padding:4px 8px;text-align:left;">工具</th><th style="padding:4px 8px;text-align:left;">内容</th><th style="padding:4px 8px;text-align:left;">依赖</th></tr>';
+                for (var i = 0; i < result.task_list.length; i++) {
+                    var t = result.task_list[i];
+                    var deps = t.rely_task_ids && t.rely_task_ids.length > 0 ? t.rely_task_ids.join(', ') : '-';
+                    var typeIcon = { tool: '🔧', rag_search: '📚', llm_summary: '💬' }[t.task_type] || '❓';
+                    html += '<tr><td style="padding:3px 8px;">' + escapeHtml(t.task_id) + '</td>'
+                        + '<td style="padding:3px 8px;">' + typeIcon + ' ' + escapeHtml(t.task_type) + '</td>'
+                        + '<td style="padding:3px 8px;">' + escapeHtml(t.tool_name || '-') + '</td>'
+                        + '<td style="padding:3px 8px;">' + escapeHtml(t.content) + '</td>'
+                        + '<td style="padding:3px 8px;">' + escapeHtml(deps) + '</td></tr>';
+                }
+                html += '</table></div>';
+            }
+
+            // 执行详情
+            if (result.task_detail && Object.keys(result.task_detail).length > 0) {
+                html += '<div style="margin-bottom:12px;padding:10px;background:#f0fff4;border-radius:8px;font-size:13px;">';
+                html += '<strong>⚡ 执行详情</strong>';
+                var taskIds = Object.keys(result.task_detail).sort();
+                for (var i = 0; i < taskIds.length; i++) {
+                    var td = result.task_detail[taskIds[i]];
+                    var statusIcon = { success: '✅', failed: '❌', pending: '⏳' }[td.status] || '❓';
+                    var statusColor = td.status === 'success' ? '#22543d' : '#991b1b';
+                    html += '<div style="margin-top:6px;padding:6px 8px;background:white;border-radius:4px;">';
+                    html += '<span style="color:' + statusColor + ';">' + statusIcon + ' <strong>' + escapeHtml(td.task_id) + '</strong></span> ';
+                    html += '<span style="color:#666;">' + escapeHtml(td.task_type) + (td.tool_name ? ' → ' + escapeHtml(td.tool_name) : '') + '</span>';
+                    html += ' <span style="color:#999;font-size:11px;">重试' + td.retry_count + '次</span>';
+                    html += '<div style="margin-top:3px;color:#555;font-size:12px;max-height:60px;overflow-y:auto;">' + escapeHtml(td.result || '') + '</div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            // 最终回答
+            html += '<div style="padding:10px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">';
+            html += '<strong style="color:#667eea;">💡 最终回答</strong>';
+            if (result.elapsed) {
+                html += ' <span style="color:#999;font-size:11px;">耗时 ' + escapeHtml(result.elapsed) + '</span>';
+            }
+            html += '<div style="margin-top:6px;">' + renderMarkdown(result.final_answer || '') + '</div>';
+            html += '</div>';
+
+            return html;
         }
 
         function escapeHtml(text) {
