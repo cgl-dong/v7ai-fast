@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import time
+import traceback
 from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
@@ -25,6 +26,9 @@ from app.services.tools import registry, all_tool_schemas
 from app.services.indexer import Indexer
 
 logger = logging.getLogger(__name__)
+
+# ── 日志分隔符，方便在日志中定位关键节点 ──
+_SEP = "─" * 60
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -70,19 +74,35 @@ class TaskScheduler:
                 "result": "",
                 "retry_count": 0,
             }
-        logger.info(f"[scheduler] initialized {len(task_list)} tasks: "
-                    f"{[(t.task_id, t.task_type) for t in task_list]}")
+        logger.info(f"[scheduler] {_SEP}")
+        logger.info(f"[scheduler] 初始化 {len(task_list)} 个任务")
+        for t in task_list:
+            deps_str = f"依赖={t.rely_task_ids}" if t.rely_task_ids else "无依赖(可并行)"
+            tool_str = f" → {t.tool_name}" if t.tool_name else ""
+            logger.info(f"[scheduler]   [{t.task_id}] {t.task_type}{tool_str} | {deps_str} | content={t.content[:60]}...")
+        logger.info(f"[scheduler] {_SEP}")
 
     def is_rely_finish(self, task: SubTask) -> bool:
         """检查依赖任务是否全部完成（success 或 failed 都算完成）。"""
+        if not task.rely_task_ids:
+            return True  # 无依赖，直接可执行
+
         for tid in task.rely_task_ids:
             item = self.task_cache.get(tid)
-            if not item or item["status"] not in ("success", "failed"):
+            if item is None:
+                logger.warning(f"[scheduler] [{task.task_id}] 依赖检查: 依赖任务 [{tid}] 不在缓存中!")
                 return False
+            if item["status"] not in ("success", "failed"):
+                logger.debug(f"[scheduler] [{task.task_id}] 依赖检查: 等待 [{tid}] (当前状态={item['status']})")
+                return False
+            logger.debug(f"[scheduler] [{task.task_id}] 依赖检查: [{tid}] 已完成 (状态={item['status']})")
+        logger.debug(f"[scheduler] [{task.task_id}] 依赖检查: 全部 {len(task.rely_task_ids)} 个依赖已满足")
         return True
 
     async def run_single_task(self, task: SubTask) -> str:
         """执行单个子任务。"""
+        logger.info(f"[scheduler] [{task.task_id}] 开始执行 (type={task.task_type}, "
+                    f"tool={task.tool_name or 'N/A'}, content={task.content[:80]}...)")
         if task.task_type == "tool":
             return await self._run_tool_task(task)
         elif task.task_type == "rag_search":
@@ -90,6 +110,7 @@ class TaskScheduler:
         elif task.task_type == "llm_summary":
             return await self._run_llm_task(task)
         else:
+            logger.error(f"[scheduler] [{task.task_id}] 不支持的任务类型: {task.task_type}")
             return f"不支持的任务类型：{task.task_type}"
 
     async def _run_tool_task(self, task: SubTask) -> str:
@@ -98,10 +119,12 @@ class TaskScheduler:
         tool = registry.get(tool_name)
         if tool is None:
             available = list(registry.names())
+            logger.error(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' 不存在，可用: {available}")
             return f"错误：工具 '{tool_name}' 不存在。可用工具：{available}"
 
+        logger.info(f"[scheduler] [{task.task_id}] 调用工具 '{tool_name}'，正在用 LLM 解析参数...")
+
         # 让 LLM 解析 content 为工具参数
-        tool_schema = tool.schema()
         prompt = f"""你是一个工具调用解析器。根据用户指令，提取工具调用参数。
 
 工具名称: {tool_name}
@@ -117,22 +140,32 @@ class TaskScheduler:
             raw = await self.ai.call_model(prompt)
             json_str = self._extract_json(raw)
             args = json.loads(json_str)
-            logger.info(f"[scheduler] tool '{tool_name}' args: {args}")
+            logger.info(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' 参数解析完成: {args}")
+            logger.info(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' 开始执行...")
             result = await tool.execute(**args)
+            logger.info(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' 执行完成: {len(result)} chars")
             return result
+        except json.JSONDecodeError as e:
+            logger.error(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' JSON 解析失败: {e}, raw={raw[:200]}")
+            return f"工具参数解析失败：{str(e)}"
         except Exception as e:
-            logger.error(f"[scheduler] tool '{tool_name}' failed: {e}")
+            logger.error(f"[scheduler] [{task.task_id}] 工具 '{tool_name}' 执行失败: {e}\n{traceback.format_exc()}")
             return f"工具执行失败：{str(e)}"
 
     async def _run_rag_task(self, task: SubTask) -> str:
         """知识库检索任务。"""
+        logger.info(f"[scheduler] [{task.task_id}] RAG 检索: query='{task.content[:80]}...'")
         try:
             indexer = Indexer(self.db) if self.db else None
             if indexer is None:
+                logger.warning(f"[scheduler] [{task.task_id}] RAG 检索失败: 知识库未初始化 (db is None)")
                 return "知识库未初始化，无法检索"
             results = indexer.search_chunks(task.content, top_k=3)
             if not results:
+                logger.warning(f"[scheduler] [{task.task_id}] RAG 检索: 未找到匹配结果")
                 return f"知识库中未找到与 '{task.content}' 相关的内容"
+            logger.info(f"[scheduler] [{task.task_id}] RAG 检索: 找到 {len(results)} 条结果, "
+                        f"top_sim={results[0].get('similarity', 0):.3f}")
             parts = []
             for i, r in enumerate(results):
                 src = r.get("filename", "unknown")
@@ -140,16 +173,18 @@ class TaskScheduler:
                 parts.append(f"[来源{i+1}: {src} | 相似度: {sim:.2f}]\n{r['content']}")
             return "\n\n---\n\n".join(parts)
         except Exception as e:
-            logger.error(f"[scheduler] rag_search failed: {e}")
+            logger.error(f"[scheduler] [{task.task_id}] RAG 检索异常: {e}\n{traceback.format_exc()}")
             return f"知识库检索失败：{str(e)}"
 
     async def _run_llm_task(self, task: SubTask) -> str:
         """纯文本推理任务。"""
+        logger.info(f"[scheduler] [{task.task_id}] LLM 推理: prompt={task.content[:80]}...")
         try:
             result = await self.ai.call_model(task.content)
+            logger.info(f"[scheduler] [{task.task_id}] LLM 推理完成: {len(result)} chars")
             return result
         except Exception as e:
-            logger.error(f"[scheduler] llm_summary failed: {e}")
+            logger.error(f"[scheduler] [{task.task_id}] LLM 推理失败: {e}\n{traceback.format_exc()}")
             return f"文本推理失败：{str(e)}"
 
     async def run_all_tasks(self) -> str:
@@ -161,18 +196,32 @@ class TaskScheduler:
         finished = set()
         round_num = 0
 
+        logger.info(f"[scheduler] {_SEP}")
+        logger.info(f"[scheduler] 开始调度执行，共 {len(all_task_ids)} 个任务: {all_task_ids}")
+
         while len(finished) < len(all_task_ids):
             round_num += 1
+            logger.info(f"[scheduler] {_SEP}")
+            logger.info(f"[scheduler] ═══ 第 {round_num} 轮调度开始 ═══")
+
+            # ── 打印当前所有任务状态 ──
+            self._log_state_snapshot(all_task_ids, finished)
+
             # 找出本轮可执行的任务（pending + 依赖全部完成）
             ready_tasks = []
+            blocked_tasks = []
             for tid in all_task_ids:
                 if tid in finished:
                     continue
                 item = self.task_cache[tid]
                 if item["status"] != "pending":
+                    logger.debug(f"[scheduler] [{tid}] 跳过: 状态={item['status']} (非 pending)")
                     continue
                 task_info = item["info"]
                 if not self.is_rely_finish(task_info):
+                    blocked_reason = self._get_blocked_reason(task_info)
+                    logger.debug(f"[scheduler] [{tid}] 阻塞: {blocked_reason}")
+                    blocked_tasks.append(tid)
                     continue
                 ready_tasks.append(tid)
 
@@ -181,9 +230,14 @@ class TaskScheduler:
                 pending_ids = [tid for tid in all_task_ids if tid not in finished
                                and self.task_cache[tid]["status"] == "pending"]
                 if pending_ids:
-                    logger.warning(f"[scheduler] deadlock detected: pending tasks {pending_ids} "
-                                   f"have unmet dependencies")
-                    # 标记所有死锁任务为 failed
+                    logger.warning(f"[scheduler] {_SEP}")
+                    logger.warning(f"[scheduler] ⚠ 死锁检测: {len(pending_ids)} 个任务无法执行!")
+                    for tid in pending_ids:
+                        item = self.task_cache[tid]
+                        task_info = item["info"]
+                        blocked = self._get_blocked_reason(task_info)
+                        logger.warning(f"[scheduler]   [{tid}] {task_info.task_type} | 阻塞原因: {blocked}")
+                    logger.warning(f"[scheduler] 标记所有死锁任务为 failed")
                     for tid in pending_ids:
                         self.task_cache[tid]["status"] = "failed"
                         self.task_cache[tid]["result"] = "任务因依赖未满足而跳过"
@@ -195,69 +249,120 @@ class TaskScheduler:
                            if not self.task_cache[tid]["info"].rely_task_ids]
             dependent = [tid for tid in ready_tasks if tid not in set(independent)]
 
-            logger.info(f"[scheduler] round {round_num}: independent={independent}, dependent={dependent}")
+            logger.info(f"[scheduler] 本轮就绪: 独立={independent} ({len(independent)}个), "
+                        f"依赖={dependent} ({len(dependent)}个), 阻塞={blocked_tasks} ({len(blocked_tasks)}个)")
 
             # 并行执行所有独立任务
             if independent:
+                logger.info(f"[scheduler] ▶ 并行执行 {len(independent)} 个独立任务: {independent}")
                 await self._execute_batch(independent, finished)
 
             # 串行执行依赖任务（保守策略，确保顺序正确）
-            for tid in dependent:
-                await self._execute_single(tid)
-                finished.add(tid)
+            if dependent:
+                logger.info(f"[scheduler] ▶ 串行执行 {len(dependent)} 个依赖任务: {dependent}")
+                for tid in dependent:
+                    logger.info(f"[scheduler]   → 执行 [{tid}] (依赖已完成: "
+                                f"{self.task_cache[tid]['info'].rely_task_ids})")
+                    await self._execute_single(tid)
+                    finished.add(tid)
+
+            logger.info(f"[scheduler] 第 {round_num} 轮结束: 已完成 {len(finished)}/{len(all_task_ids)}")
 
             # 防止无限循环
             if round_num > 10:
-                logger.warning("[scheduler] max rounds reached, forcing finish")
+                logger.warning(f"[scheduler] {_SEP}")
+                logger.warning(f"[scheduler] ⚠ 达到最大轮次 {round_num}，强制结束!")
                 for tid in all_task_ids:
                     if tid not in finished:
                         self.task_cache[tid]["status"] = "failed"
                         self.task_cache[tid]["result"] = "超过最大执行轮次，任务被跳过"
                         finished.add(tid)
+                        logger.warning(f"[scheduler]   [{tid}] 强制标记为 failed")
                 break
+
+        logger.info(f"[scheduler] {_SEP}")
+        logger.info(f"[scheduler] 调度完成: {len(finished)}/{len(all_task_ids)} 个任务已处理")
 
         # 汇总所有任务结果
         return self._build_summary()
 
+    def _log_state_snapshot(self, all_task_ids: List[str], finished: set):
+        """打印当前所有任务的状态快照，方便排查。"""
+        logger.info(f"[scheduler] ── 状态快照 ──")
+        for tid in sorted(all_task_ids):
+            item = self.task_cache[tid]
+            task_info = item["info"]
+            is_finished = tid in finished
+            marker = "✓" if is_finished else " "
+            deps = f"→ 依赖={task_info.rely_task_ids}" if task_info.rely_task_ids else ""
+            logger.info(f"[scheduler]   [{marker}] {tid:6s} | {item['status']:8s} | "
+                        f"{task_info.task_type:12s} | retry={item['retry_count']} {deps}")
+
+    def _get_blocked_reason(self, task: SubTask) -> str:
+        """获取任务被阻塞的具体原因。"""
+        reasons = []
+        for tid in task.rely_task_ids:
+            item = self.task_cache.get(tid)
+            if item is None:
+                reasons.append(f"[{tid}] 不在缓存中")
+            elif item["status"] not in ("success", "failed"):
+                reasons.append(f"[{tid}] 状态={item['status']}")
+            # else: 已完成，不阻塞
+        return "; ".join(reasons) if reasons else "未知原因"
+
     async def _execute_batch(self, task_ids: List[str], finished: set):
         """并行执行一批独立任务。"""
-        logger.info(f"[scheduler] parallel executing {len(task_ids)} tasks: {task_ids}")
+        logger.info(f"[scheduler] ┌─ 并行批次开始: {len(task_ids)} 个任务: {task_ids}")
+        t_batch = time.time()
         tasks = []
         for tid in task_ids:
             self.task_cache[tid]["status"] = "running"
+            logger.info(f"[scheduler] │  [{tid}] 状态 → running")
             tasks.append(self._execute_single(tid))
 
-        await asyncio.gather(*tasks)
-        for tid in task_ids:
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for i, tid in enumerate(task_ids):
             finished.add(tid)
+            if isinstance(results[i], Exception):
+                logger.error(f"[scheduler] │  [{tid}] gather 捕获异常: {results[i]}")
+        batch_elapsed = time.time() - t_batch
+        logger.info(f"[scheduler] └─ 并行批次结束: 耗时={batch_elapsed:.1f}s")
 
     async def _execute_single(self, task_id: str):
         """执行单个任务（含重试逻辑）。"""
         item = self.task_cache[task_id]
         task_info = item["info"]
         item["status"] = "running"
+        logger.info(f"[scheduler] [{task_id}] ───── 开始执行 (type={task_info.task_type}, "
+                    f"tool={task_info.tool_name or 'N/A'}) ─────")
         t0 = time.time()
 
         for attempt in range(self.max_retry + 1):
+            if attempt > 0:
+                logger.warning(f"[scheduler] [{task_id}] 第 {attempt} 次重试 (共允许 {self.max_retry} 次)...")
             try:
                 result = await self.run_single_task(task_info)
                 item["result"] = result
                 item["status"] = "success"
                 elapsed = time.time() - t0
-                logger.info(f"[scheduler] {task_id} ({task_info.task_type}) success: "
-                            f"{len(result)} chars, elapsed={elapsed:.1f}s, attempts={attempt+1}")
+                logger.info(f"[scheduler] [{task_id}] ✅ 成功 (attempt={attempt+1}/{self.max_retry+1}, "
+                            f"result={len(result)} chars, elapsed={elapsed:.1f}s)")
                 return
             except Exception as e:
                 item["retry_count"] += 1
-                logger.warning(f"[scheduler] {task_id} attempt {attempt+1}/{self.max_retry+1} failed: {e}")
+                logger.warning(f"[scheduler] [{task_id}] ❌ 第 {attempt+1}/{self.max_retry+1} 次尝试失败: "
+                               f"{type(e).__name__}: {e}")
+                logger.debug(f"[scheduler] [{task_id}] 异常堆栈:\n{traceback.format_exc()}")
                 if attempt < self.max_retry:
-                    await asyncio.sleep(1)  # 短暂等待后重试
+                    wait_sec = 1 * (attempt + 1)  # 递增等待: 1s, 2s
+                    logger.info(f"[scheduler] [{task_id}] 等待 {wait_sec}s 后重试...")
+                    await asyncio.sleep(wait_sec)
                 else:
                     item["status"] = "failed"
                     item["result"] = f"任务执行失败（已重试 {self.max_retry} 次）：{str(e)}"
                     elapsed = time.time() - t0
-                    logger.error(f"[scheduler] {task_id} final fail after {self.max_retry+1} attempts, "
-                                 f"elapsed={elapsed:.1f}s")
+                    logger.error(f"[scheduler] [{task_id}] ❌ 最终失败: 已重试 {self.max_retry} 次, "
+                                 f"total_elapsed={elapsed:.1f}s, error={e}")
 
     def _build_summary(self) -> str:
         """构建任务执行汇总。"""
